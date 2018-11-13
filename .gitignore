@@ -82,3 +82,4 @@
 *.vcxproj.user
 **/.vs/*
 src/stellar-core-test-*
+src/archtmp-*
