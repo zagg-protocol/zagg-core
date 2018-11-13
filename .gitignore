@@ -81,4 +81,4 @@
 *.opendb
 *.vcxproj.user
 **/.vs/*
-
+src/stellar-core-test-4*
