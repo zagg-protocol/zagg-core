@@ -26,7 +26,8 @@ enum OperationType
     ACCOUNT_MERGE = 8,
     INFLATION = 9,
     MANAGE_DATA = 10,
-    BUMP_SEQUENCE = 11
+    BUMP_SEQUENCE = 11,
+    MARK_ACCOUNT = 12
 };
 
 /* CreateAccount
@@ -236,6 +237,18 @@ struct BumpSequenceOp
     SequenceNumber bumpTo;
 };
 
+/*  Mark an account with custom data
+    Threshold : high 
+
+    Result: MarkAccountResult
+*/
+
+struct MarkAccountOp
+{
+    AccountMarker accountMarker;
+};
+
+
 /* An operation is the lowest unit of work that a transaction does */
 struct Operation
 {
@@ -270,6 +283,8 @@ struct Operation
         ManageDataOp manageDataOp;
     case BUMP_SEQUENCE:
         BumpSequenceOp bumpSequenceOp;
+    case MARK_ACCOUNT:
+        MarkAccountOp markAccountOp;    
     }
     body;
 };
@@ -321,6 +336,9 @@ struct Transaction
 
     // sequence number to consume in the account
     SequenceNumber seqNum;
+
+    //Test data structure
+    AccountMarker accountMarkerLedger;
 
     // validity range (inclusive) for the last ledger close time
     TimeBounds* timeBounds;
@@ -687,6 +705,24 @@ case BUMP_SEQUENCE_SUCCESS:
 default:
     void;
 };
+
+/********** MarkAccount Result ********/
+
+enum MarkAccountResultCode
+{
+    MARK_ACCOUNT_SUCCESS = 0,
+    MARK_ACCOUNT_FAILED = -1,
+    MARK_ACCOUNT_BAD_MARKER = -2
+};
+
+union MarkAccountResult switch (MarkAccountResultCode code)
+{
+    case MARK_ACCOUNT_SUCCESS:
+        void;
+    default:
+        void;    
+};
+
 /* High level Operation Result */
 
 enum OperationResultCode
@@ -727,6 +763,8 @@ case opINNER:
         ManageDataResult manageDataResult;
     case BUMP_SEQUENCE:
         BumpSequenceResult bumpSeqResult;
+    case MARK_ACCOUNT:
+        MarkAccountResult markAccountResult;
     }
     tr;
 default:
