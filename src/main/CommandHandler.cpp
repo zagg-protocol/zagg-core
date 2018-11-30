@@ -160,6 +160,7 @@ CommandHandler::testAcc(std::string const& params, std::string& retStr)
             root["id"] = KeyUtils::toStrKey(acc->getID());
             root["balance"] = (Json::Int64)acc->getBalance();
             root["seqnum"] = (Json::UInt64)acc->getSeqNum();
+            root["accountmarker"]  = (Json::UInt64)acc->getAccountMarker();
         }
     }
     retStr = root.toStyledString();

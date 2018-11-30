@@ -108,6 +108,19 @@ class AccountFrame : public EntryFrame
         return mAccountEntry.seqNum;
     }
 
+
+    void
+    setAccountMarker(AccountMarker marker)
+    {
+        clearCached();
+        mAccountEntry.accountMarker = marker;
+    }
+    AccountMarker
+    getAccountMarker() const
+    {
+        return mAccountEntry.accountMarker;
+    }
+
     AccountEntry const&
     getAccount() const
     {

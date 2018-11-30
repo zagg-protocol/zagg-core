@@ -858,6 +858,9 @@
     <ClCompile Include="..\..\src\transactions\BumpSequenceOpFrame.cpp">
       <Filter>transactions</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\transactions\MarkAccountOpFrame.cpp">
+      <Filter>transactions</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\src\overlay\PeerSharedKeyId.cpp">
       <Filter>overlay</Filter>
     </ClCompile>
@@ -1491,6 +1494,9 @@
       <Filter>database</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\transactions\BumpSequenceOpFrame.h">
+      <Filter>transactions</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\transactions\MarkAccountOpFrame.h">
       <Filter>transactions</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\main\StellarCoreVersion.h">

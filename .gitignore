@@ -19,7 +19,7 @@
 *.suo
 *.trs
 *.db
-
+*.bak
 # text editors
 *~
 *.swp

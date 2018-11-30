@@ -112,6 +112,7 @@ struct AccountEntry
     AccountID accountID;      // master public key for this account
     int64 balance;            // in stroops
     SequenceNumber seqNum;    // last sequence number used for this account
+    AccountMarker accountMarker;
     uint32 numSubEntries;     // number of sub-entries this account has
                               // drives the reserve
     AccountID* inflationDest; // Account to vote for during inflation

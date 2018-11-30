@@ -1,4 +1,6 @@
-//
+// Copyright 2017 Stellar Development Foundation and contributors. Licensed
+// under the Apache License, Version 2.0. See the COPYING file at the root
+// of this distribution or at http://www.apache.org/licenses/LICENSE-2.0
 
 #include "transactions/MarkAccountOpFrame.h"
 #include "crypto/SignerKey.h"
@@ -8,8 +10,6 @@
 #include "medida/metrics_registry.h"
 #include "transactions/TransactionFrame.h"
 #include "util/XDROperators.h"
-
-
 
 namespace stellar 
 {
@@ -23,14 +23,14 @@ MarkAccountOpFrame::MarkAccountOpFrame(Operation const& op,
 
 
 ThresholdLevel
-MarkAccountOpFrame::getThreadsholdLevel() const 
+MarkAccountOpFrame::getThresholdLevel() const 
 {
     return ThresholdLevel::HIGH;
 }
 
 
 bool
-MarkSequenceOpFrame::isVersionSupported(uint32_t protocolVersion) const
+MarkAccountOpFrame::isVersionSupported(uint32_t protocolVersion) const
 {
     return protocolVersion >= 10;
 }
@@ -38,14 +38,14 @@ MarkSequenceOpFrame::isVersionSupported(uint32_t protocolVersion) const
 
 bool 
 MarkAccountOpFrame::doApply(Application& app, LedgerDelta& delta,
-                             LedgerManger& ledgerManager)
+                             LedgerManager& ledgerManager)
 {
     AccountMarker accountMarker = mSourceAccount->getAccountMarker();
 
-    if(accountMarker != null)
+    // if(accountMarker != 0)
     {
-        mSourceAccount->setAccountMarker(mMarkAccountOp.markTo);
-        mSourceAccount->storageChange(delta, ledgerManager.getDatabase());
+        mSourceAccount->setAccountMarker(mMarkAccountOp.accountMarker);
+        mSourceAccount->storeChange(delta, ledgerManager.getDatabase());
     }
 
     innerResult().code(MARK_ACCOUNT_SUCCESS);
@@ -58,7 +58,7 @@ MarkAccountOpFrame::doApply(Application& app, LedgerDelta& delta,
 bool
 MarkAccountOpFrame::doCheckValid(Application& app)
 {
-    if (mMarkAccountOp.markTo == 0)
+    if (mMarkAccountOp.accountMarker == 0)
     {
         app.getMetrics()
             .NewMeter({"op-mark-account", "invalid", "bad-marker"}, "operation")

@@ -28,6 +28,7 @@ const char* AccountFrame::kSQLCreateStatement1 =
     "accountid       VARCHAR(56)  PRIMARY KEY,"
     "balance         BIGINT       NOT NULL CHECK (balance >= 0),"
     "seqnum          BIGINT       NOT NULL,"
+    "accountmarker   BIGINT       NOT NULL,"
     "numsubentries   INT          NOT NULL CHECK (numsubentries >= 0),"
     "inflationdest   VARCHAR(56),"
     "homedomain      VARCHAR(32)  NOT NULL,"
@@ -357,7 +358,7 @@ AccountFrame::loadAccount(AccountID const& accountID, Database& db)
     AccountEntry& account = res->getAccount();
 
     auto prep =
-        db.getPreparedStatement("SELECT balance, seqnum, numsubentries, "
+        db.getPreparedStatement("SELECT balance, seqnum, accountmarker, numsubentries, "
                                 "inflationdest, homedomain, thresholds, "
                                 "flags, lastmodified, buyingliabilities, "
                                 "sellingliabilities "
@@ -365,6 +366,7 @@ AccountFrame::loadAccount(AccountID const& accountID, Database& db)
     auto& st = prep.statement();
     st.exchange(into(account.balance));
     st.exchange(into(account.seqNum));
+    st.exchange(into(account.accountMarker));
     st.exchange(into(account.numSubEntries));
     st.exchange(into(inflationDest, inflationDestInd));
     st.exchange(into(homeDomain));
@@ -569,8 +571,8 @@ AccountFrame::storeUpdate(LedgerDelta& delta, Database& db, bool insert)
         sql = std::string(
             "INSERT INTO accounts ( accountid, balance, seqnum, "
             "numsubentries, inflationdest, homedomain, thresholds, flags, "
-            "lastmodified, buyingliabilities, sellingliabilities ) "
-            "VALUES ( :id, :v1, :v2, :v3, :v4, :v5, :v6, :v7, :v8, :v9, :v10 "
+            "lastmodified, buyingliabilities, sellingliabilities, accountmarker ) "
+            "VALUES ( :id, :v1, :v2, :v3, :v4, :v5, :v6, :v7, :v8, :v9, :v10, :v11 "
             ")");
     }
     else
@@ -618,6 +620,8 @@ AccountFrame::storeUpdate(LedgerDelta& delta, Database& db, bool insert)
         st.exchange(use(getLastModified(), "v8"));
         st.exchange(use(liabilities.buying, liabilitiesInd, "v9"));
         st.exchange(use(liabilities.selling, liabilitiesInd, "v10"));
+        st.exchange(use(mAccountEntry.accountMarker, "v11"));
+        
         st.define_and_bind();
         {
             auto timer = insert ? db.getInsertTimer("account")

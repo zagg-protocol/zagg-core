@@ -338,7 +338,7 @@ struct Transaction
     SequenceNumber seqNum;
 
     //Test data structure
-    AccountMarker accountMarkerLedger;
+    AccountMarker accountMarker;
 
     // validity range (inclusive) for the last ledger close time
     TimeBounds* timeBounds;

@@ -134,6 +134,12 @@ class TransactionFrame
         return mEnvelope.tx.seqNum;
     }
 
+    AccountMarker
+    getAccountMarker() const
+    {
+        return mEnvelope.tx.accountMarker; 
+    }
+
     AccountFrame const&
     getSourceAccount() const
     {
