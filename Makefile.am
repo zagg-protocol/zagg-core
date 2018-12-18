@@ -1,6 +1,6 @@
 ## Process this file with automake to produce Makefile.in
 
-SUBDIRS = lib src
+SUBDIRS = utxo lib src
 AM_EXTRA_RECURSIVE_TARGETS = check-valgrind
 ACLOCAL_AMFLAGS = -I m4
 
