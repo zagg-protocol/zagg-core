@@ -9,27 +9,27 @@ use make -j [N] to compile the source code. [N] is number of cores of your cpu; 
 
 
 Create databases first, can use the same command to reset the databases
-./src/stellar-core --conf config/node01/stellar-core.cfg --newdb
-./src/stellar-core --conf config/node02/stellar-core.cfg --newdb
+./src/stellar-core --conf config/node01/stellar-core.cfg --newdb 
+./src/stellar-core --conf config/node02/stellar-core.cfg --newdb 
 
 
 
-./src/stellar-core --conf config/node01/stellar-core.cfg --newhist vs
-./src/stellar-core --conf config/node02/stellar-core.cfg --newhist vs
+./src/stellar-core --conf config/node01/stellar-core.cfg --newhist vs 
+./src/stellar-core --conf config/node02/stellar-core.cfg --newhist vs 
 
 
 
-./src/stellar-core --conf config/node01/stellar-core.cfg --forcescp
-./src/stellar-core --conf config/node02/stellar-core.cfg --forcescp
+./src/stellar-core --conf config/node01/stellar-core.cfg --forcescp 
+./src/stellar-core --conf config/node02/stellar-core.cfg --forcescp 
 
 
-./src/stellar-core --conf config/node01/stellar-core.cfg
-./src/stellar-core --conf config/node02/stellar-core.cfg
+./src/stellar-core --conf config/node01/stellar-core.cfg 
+./src/stellar-core --conf config/node02/stellar-core.cfg 
 
 
 starting the nodes
-./src/stellar-core -c config/node01/stellar-core.cfg
-./src/stellar-core -c config/node02/stellar-core.cfg
+./src/stellar-core -c config/node01/stellar-core.cfg 
+./src/stellar-core -c config/node02/stellar-core.cfg 
 
 Create an account: 
 generate a seed pair first
