@@ -74,6 +74,12 @@
 /fuzz-findings/
 /my-history/
 
+# Ignore config folders
+dbs/*
+logs/*
+buckets/*
+tmp/*
+
 # Windows specific
 **/Build/*
 **/generated/*
