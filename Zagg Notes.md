@@ -1,6 +1,6 @@
-#Please READ INSTALL.md  
+# Please READ INSTALL.md  
   
-./autogen.sh - to generate all local make.in files and configs  
+`./autogen.sh` - to generate all local make.in files and configs  
   
 if you are facing issues with the build w.r.t postgres module rerun the config disabling the postgres module  
 `./configure --disable-postgres`   
@@ -22,12 +22,12 @@ use `make -j [N]` to compile the source code. `[N]` is number of cores of your c
   
   
 `./src/stellar-core --conf config/node01/stellar-core.cfg` 
-`./src/stellar-core --conf config/node02/stellar-core.cfg`
+`./src/stellar-core --conf config/node02/stellar-core.cfg`  
   
   
 ### Starting the nodes  
 `./src/stellar-core -c config/node01/stellar-core.cfg`
-`./src/stellar-core -c config/node02/stellar-core.cfg ` 
+`./src/stellar-core -c config/node02/stellar-core.cfg`  
   
 ### Create an account:  
 generate a seed pair first  
