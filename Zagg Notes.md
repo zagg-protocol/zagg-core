@@ -8,12 +8,12 @@ if you are facing issues with the build w.r.t postgres module rerun the config d
 use `make -j [N]` to compile the source code. `[N]` is number of cores of your cpu; example `make -j 4` if you have 4 core processor  
 
   
-Create databases first, can use the same command to reset the databases  
-`./src/stellar-core --conf config/node01/stellar-core.cfg --newdb`
-`./src/stellar-core --conf config/node02/stellar-core.cfg --newdb ` 
+### Create databases first, can use the same command to reset the databases  
+`./src/stellar-core --conf config/node01/stellar-core.cfg --newdb`  
+`./src/stellar-core --conf config/node02/stellar-core.cfg --newdb`  
   
     
-`./src/stellar-core --conf config/node01/stellar-core.cfg --newhist vs`
+`./src/stellar-core --conf config/node01/stellar-core.cfg --newhist vs`  
 `./src/stellar-core --conf config/node02/stellar-core.cfg --newhist vs`   
   
    
@@ -25,11 +25,11 @@ Create databases first, can use the same command to reset the databases
 `./src/stellar-core --conf config/node02/stellar-core.cfg`
   
   
-#Starting the nodes  
+### Starting the nodes  
 `./src/stellar-core -c config/node01/stellar-core.cfg`
 `./src/stellar-core -c config/node02/stellar-core.cfg ` 
   
-#Create an account:  
+### Create an account:  
 generate a seed pair first  
 1. ./src/stellar-core --genseed
 Example output: Secret seed: SBKYQFOSM2NHEWAUDKNF65P73OS3RUOSS6YNXCVL6PWZUASGINSB2KGM
