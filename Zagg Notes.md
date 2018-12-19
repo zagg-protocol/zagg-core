@@ -9,7 +9,7 @@ use make -j [N] to compile the source code. [N] is number of cores of your cpu; 
 
 
 Create databases first, can use the same command to reset the databases
-./src/stellar-core --conf config/node01/stellar-core.cfg --newdb 
+./src/stellar-core --conf config/node01/stellar-core.cfg --newdb  
 ./src/stellar-core --conf config/node02/stellar-core.cfg --newdb 
 
 
