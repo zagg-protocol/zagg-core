@@ -89,6 +89,7 @@ CommandHandler::CommandHandler(Application& app) : mApp(app)
     addRoute("testacc", &CommandHandler::testAcc);
     addRoute("testtx", &CommandHandler::testTx);
     addRoute("tx", &CommandHandler::tx);
+    addRoute("utxoTx", &CommandHandler::tx);
     addRoute("upgrades", &CommandHandler::upgrades);
     addRoute("unban", &CommandHandler::unban);
 }
@@ -846,6 +847,63 @@ CommandHandler::ll(std::string const& params, std::string& retStr)
     }
 
     retStr = root.toStyledString();
+}
+
+void
+CommandHandler::utxoTx(std::string const& params, std::string& retStr)
+{
+    std::ostringstream output;
+
+    const std::string prefix("?blob=");
+    if (params.compare(0, prefix.size(), prefix) == 0)
+    {
+        TransactionEnvelope envelope;
+        std::string blob = params.substr(prefix.size());
+        std::vector<uint8_t> binBlob;
+        decoder::decode_b64(blob, binBlob);
+
+        xdr::xdr_from_opaque(binBlob, envelope);
+        TransactionFramePtr transaction =
+            TransactionFrame::makeTransactionFromWire(mApp.getNetworkID(),
+                                                      envelope);
+        if (transaction)
+        {
+            // add it to our current set
+            // and make sure it is valid
+            Herder::TransactionSubmitStatus status =
+                mApp.getHerder().recvTransaction(transaction);
+
+            if (status == Herder::TX_STATUS_PENDING)
+            {
+                StellarMessage msg;
+                msg.type(TRANSACTION);
+                msg.transaction() = envelope;
+                mApp.getOverlayManager().broadcastMessage(msg);
+            }
+
+            output << "{"
+                   << "\"status\": "
+                   << "\"" << Herder::TX_STATUS_STRING[status] << "\"";
+            if (status == Herder::TX_STATUS_ERROR)
+            {
+                std::string resultBase64;
+                auto resultBin = xdr::xdr_to_opaque(transaction->getResult());
+                resultBase64.reserve(decoder::encoded_size64(resultBin.size()) +
+                                     1);
+                resultBase64 = decoder::encode_b64(resultBin);
+
+                output << " , \"error\": \"" << resultBase64 << "\"";
+            }
+            output << "}";
+        }
+    }
+    else
+    {
+        throw std::invalid_argument("Must specify a tx blob: tx?blob=<tx in "
+                                    "xdr format>\"}");
+    }
+
+    retStr = output.str();
 }
 
 void
