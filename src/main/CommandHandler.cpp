@@ -28,6 +28,7 @@
 
 #include "test/TestAccount.h"
 #include "test/TxTests.h"
+#include "utxo/lib/add.h"
 #include <regex>
 
 using namespace stellar::txtest;
@@ -851,6 +852,11 @@ CommandHandler::ll(std::string const& params, std::string& retStr)
 void
 CommandHandler::tx(std::string const& params, std::string& retStr)
 {
+    //using UTXO library
+     AddClass utxolibobj;
+     CLOG(TRACE, "Bucket") << "UTXO CommandHandler::tx"
+                        << "UTXO Result of value 15, 13: " << utxolibobj.addValues(15,13);
+    
     std::ostringstream output;
 
     const std::string prefix("?blob=");
@@ -879,18 +885,17 @@ CommandHandler::tx(std::string const& params, std::string& retStr)
                 msg.transaction() = envelope;
                 mApp.getOverlayManager().broadcastMessage(msg);
             }
-
+            AddClass addClass;
             output << "{"
                    << "\"status\": "
-                   << "\"" << Herder::TX_STATUS_STRING[status] << "\"";
+                   << "\"" << Herder::TX_STATUS_STRING[status] << "\"";                   
             if (status == Herder::TX_STATUS_ERROR)
             {
                 std::string resultBase64;
                 auto resultBin = xdr::xdr_to_opaque(transaction->getResult());
                 resultBase64.reserve(decoder::encoded_size64(resultBin.size()) +
                                      1);
-                resultBase64 = decoder::encode_b64(resultBin);
-
+                resultBase64 = decoder::encode_b64(resultBin);       
                 output << " , \"error\": \"" << resultBase64 << "\"";
             }
             output << "}";

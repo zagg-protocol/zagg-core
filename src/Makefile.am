@@ -9,7 +9,7 @@ include $(srcdir)/src.mk
 noinst_HEADERS = $(SRC_H_FILES)
 
 stellar_core_SOURCES = main/StellarCoreVersion.cpp $(SRC_CXX_FILES)
-stellar_core_LDADD = $(soci_LIBS) $(libmedida_LIBS)		\
+stellar_core_LDADD = $(soci_LIBS) $(libmedida_LIBS)	$(utxo_LIBS)	\
 	$(top_builddir)/lib/lib3rdparty.a $(sqlite3_LIBS)	\
 	$(libpq_LIBS) $(xdrpp_LIBS) $(libsodium_LIBS)
 

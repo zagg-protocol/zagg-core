@@ -191,8 +191,10 @@ AC_SUBST(libmedida_LIBS)
 soci_CFLAGS='-isystem $(top_srcdir)/lib/soci/src/core'
 soci_CFLAGS="$soci_CFLAGS "'-isystem $(top_srcdir)/lib/soci/src/backends/sqlite3'
 soci_LIBS='$(top_builddir)/lib/libsoci.a'
+utxo_LIBS='$(top_builddir)/utxo/lib/libutxo.a'
 AC_SUBST(soci_CFLAGS)
 AC_SUBST(soci_LIBS)
+AC_SUBST(utxo_LIBS)
 
 libasio_CFLAGS='-DASIO_SEPARATE_COMPILATION=1 -DASIO_STANDALONE -isystem $(top_srcdir)/lib/asio/asio/include'
 AC_SUBST(libasio_CFLAGS)
