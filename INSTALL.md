@@ -57,12 +57,14 @@ When building on OSX, here's some dependencies you'll need:
 - brew install libpqxx *(If ./configure later complains about libpq missing, try PKG_CONFIG_PATH='/usr/local/lib/pkgconfig')*
 - brew install pandoc
 
+You may need to link few of the packages manually to avoid errors. 
+
 ### Windows
 See [INSTALL-Windows.md](INSTALL-Windows.md)
 
 ## Basic Installation
 
-- `git clone https://github.com/stellar/stellar-core.git`
+- `git clone https://gitlab.com/zaggprotocol-implementataion/ZaggProtocolCore.git`
 - `cd stellar-core`
 - `git submodule init`
 - `git submodule update`
