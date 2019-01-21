@@ -1,6 +1,5 @@
 # What is ZAGG Protocol?
 
-# stellar-core
 ZAGG Protocol’s implementation of enterprise-grade privacy on public blockchain is designed to drive blockchain to mainstream enterprise-oriented payments and settlement use cases.
 ZAGG Protocol is building a novel privacy-preserving Blockchain. Innovations in ZAGG Protocol bring privacy to public blockchain through a hybrid model of tracking assets and values on the blockchain with both Accounts and UTXOs.This solution adapts the privacy and robustness of the UTXO model’s construct to build a flexible and programmable account-based blockchain.
 
