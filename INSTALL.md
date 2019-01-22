@@ -1,3 +1,14 @@
+#Bitcoin Build Instructions
+cd lib/bitcoin
+
+./autogen.sh
+
+NOTE: change heap size based on your PC memory
+./configure CXXFLAGS="--param ggc-min-expand=1 --param ggc-min-heapsize=65536" --disable-zmq --disable-wallet --without-gui --without-miniupnpc
+
+
+make -j 8
+
 Installation Instructions
 ==================
 These are instructions for building stellar-core from source.
