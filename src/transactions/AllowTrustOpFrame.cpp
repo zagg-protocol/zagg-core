@@ -4,13 +4,13 @@
 
 #include "transactions/AllowTrustOpFrame.h"
 #include "database/Database.h"
-#include "ledger/LedgerDelta.h"
 #include "ledger/LedgerManager.h"
-#include "ledger/OfferFrame.h"
-#include "ledger/TrustFrame.h"
+#include "ledger/LedgerTxn.h"
+#include "ledger/LedgerTxnEntry.h"
+#include "ledger/LedgerTxnHeader.h"
+#include "ledger/TrustLineWrapper.h"
 #include "main/Application.h"
-#include "medida/meter.h"
-#include "medida/metrics_registry.h"
+#include "transactions/TransactionUtils.h"
 
 namespace stellar
 {
@@ -28,43 +28,43 @@ AllowTrustOpFrame::getThresholdLevel() const
 }
 
 bool
-AllowTrustOpFrame::doApply(Application& app, LedgerDelta& delta,
-                           LedgerManager& ledgerManager)
+AllowTrustOpFrame::doApply(Application& app, AbstractLedgerTxn& ltx)
 {
-    if (ledgerManager.getCurrentLedgerVersion() > 2)
+    if (ltx.loadHeader().current().ledgerVersion > 2)
     {
         if (mAllowTrust.trustor == getSourceID())
-        { // since version 3 it is not
-            // allowed to use ALLOW_TRUST on
-            // self
-            app.getMetrics()
-                .NewMeter({"op-allow-trust", "failure", "trust-self"},
-                          "operation")
-                .Mark();
+        {
+            // since version 3 it is not allowed to use ALLOW_TRUST on self
             innerResult().code(ALLOW_TRUST_SELF_NOT_ALLOWED);
             return false;
         }
     }
 
-    if (!(mSourceAccount->getAccount().flags & AUTH_REQUIRED_FLAG))
-    { // this account doesn't require authorization to
-        // hold credit
-        app.getMetrics()
-            .NewMeter({"op-allow-trust", "failure", "not-required"},
-                      "operation")
-            .Mark();
-        innerResult().code(ALLOW_TRUST_TRUST_NOT_REQUIRED);
-        return false;
+    {
+        LedgerTxn ltxSource(ltx); // ltxSource will be rolled back
+        auto header = ltxSource.loadHeader();
+        auto sourceAccountEntry = loadSourceAccount(ltxSource, header);
+        auto const& sourceAccount = sourceAccountEntry.current().data.account();
+        if (!(sourceAccount.flags & AUTH_REQUIRED_FLAG))
+        { // this account doesn't require authorization to
+            // hold credit
+            innerResult().code(ALLOW_TRUST_TRUST_NOT_REQUIRED);
+            return false;
+        }
+
+        if (!(sourceAccount.flags & AUTH_REVOCABLE_FLAG) &&
+            !mAllowTrust.authorize)
+        {
+            innerResult().code(ALLOW_TRUST_CANT_REVOKE);
+            return false;
+        }
     }
 
-    if (!(mSourceAccount->getAccount().flags & AUTH_REVOCABLE_FLAG) &&
-        !mAllowTrust.authorize)
+    // Only possible in ledger version 1 and 2
+    if (mAllowTrust.trustor == getSourceID())
     {
-        app.getMetrics()
-            .NewMeter({"op-allow-trust", "failure", "cant-revoke"}, "operation")
-            .Mark();
-        innerResult().code(ALLOW_TRUST_CANT_REVOKE);
-        return false;
+        innerResult().code(ALLOW_TRUST_SUCCESS);
+        return true;
     }
 
     Asset ci;
@@ -80,70 +80,59 @@ AllowTrustOpFrame::doApply(Application& app, LedgerDelta& delta,
         ci.alphaNum12().issuer = getSourceID();
     }
 
-    Database& db = ledgerManager.getDatabase();
-    TrustFrame::pointer trustLine =
-        TrustFrame::loadTrustLine(mAllowTrust.trustor, ci, db, &delta);
-    if (!trustLine)
+    LedgerKey key(TRUSTLINE);
+    key.trustLine().accountID = mAllowTrust.trustor;
+    key.trustLine().asset = ci;
+
+    bool didRevokeAuth = false;
     {
-        app.getMetrics()
-            .NewMeter({"op-allow-trust", "failure", "no-trust-line"},
-                      "operation")
-            .Mark();
-        innerResult().code(ALLOW_TRUST_NO_TRUST_LINE);
-        return false;
+        auto trust = ltx.load(key);
+        if (!trust)
+        {
+            innerResult().code(ALLOW_TRUST_NO_TRUST_LINE);
+            return false;
+        }
+        didRevokeAuth = isAuthorized(trust) && !mAllowTrust.authorize;
     }
 
-    bool wasAuthorized = trustLine->isAuthorized();
-    bool didRevokeAuth = wasAuthorized && !mAllowTrust.authorize;
-    if (ledgerManager.getCurrentLedgerVersion() >= 10 && didRevokeAuth)
+    auto header = ltx.loadHeader();
+    if (header.current().ledgerVersion >= 10 && didRevokeAuth)
     {
-        auto trustAcc =
-            AccountFrame::loadAccount(delta, mAllowTrust.trustor, db);
-
         // Delete all offers owned by the trustor that are either buying or
         // selling the asset which had authorization revoked.
-        auto offers = OfferFrame::loadOffersByAccountAndAsset(
-            mAllowTrust.trustor, ci, db);
+        auto offers = ltx.loadOffersByAccountAndAsset(mAllowTrust.trustor, ci);
         for (auto& offer : offers)
         {
-            delta.recordEntry(*offer);
-
-            if (offer->getBuying() == ci)
+            auto const& oe = offer.current().data.offer();
+            if (!(oe.sellerID == mAllowTrust.trustor))
             {
-                offer->releaseLiabilities(trustAcc, trustLine, nullptr, delta,
-                                          db, ledgerManager);
+                throw std::runtime_error("Offer not owned by expected account");
             }
-            else if (offer->getSelling() == ci)
+            else if (!(oe.buying == ci || oe.selling == ci))
             {
-                offer->releaseLiabilities(trustAcc, nullptr, trustLine, delta,
-                                          db, ledgerManager);
+                throw std::runtime_error(
+                    "Offer not buying or selling expected asset");
             }
 
-            trustAcc->addNumEntries(-1, ledgerManager);
-            trustAcc->storeChange(delta, db);
-            offer->storeDelete(delta, db);
+            releaseLiabilities(ltx, header, offer);
+            auto trustAcc = stellar::loadAccount(ltx, mAllowTrust.trustor);
+            addNumEntries(header, trustAcc, -1);
+            offer.erase();
         }
     }
 
-    trustLine->setAuthorized(mAllowTrust.authorize);
-    trustLine->storeChange(delta, db);
+    auto trustLineEntry = ltx.load(key);
+    setAuthorized(trustLineEntry, mAllowTrust.authorize);
 
-    app.getMetrics()
-        .NewMeter({"op-allow-trust", "success", "apply"}, "operation")
-        .Mark();
     innerResult().code(ALLOW_TRUST_SUCCESS);
     return true;
 }
 
 bool
-AllowTrustOpFrame::doCheckValid(Application& app)
+AllowTrustOpFrame::doCheckValid(Application& app, uint32_t ledgerVersion)
 {
     if (mAllowTrust.asset.type() == ASSET_TYPE_NATIVE)
     {
-        app.getMetrics()
-            .NewMeter({"op-allow-trust", "invalid", "malformed-non-alphanum"},
-                      "operation")
-            .Mark();
         innerResult().code(ALLOW_TRUST_MALFORMED);
         return false;
     }
@@ -162,10 +151,6 @@ AllowTrustOpFrame::doCheckValid(Application& app)
 
     if (!isAssetValid(ci))
     {
-        app.getMetrics()
-            .NewMeter({"op-allow-trust", "invalid", "malformed-invalid-asset"},
-                      "operation")
-            .Mark();
         innerResult().code(ALLOW_TRUST_MALFORMED);
         return false;
     }

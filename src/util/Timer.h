@@ -105,7 +105,6 @@ class VirtualClock
 
   private:
     asio::io_service mIOService;
-    asio::basic_waitable_timer<std::chrono::system_clock> mRealTimer;
     Mode mMode;
 
     uint32_t mRecentCrankCount;
@@ -114,9 +113,9 @@ class VirtualClock
     size_t nRealTimerCancelEvents;
     time_point mNow;
 
-    bool mDelayExecution{false};
+    bool mDelayExecution{true};
+    std::recursive_mutex mDelayExecutionMutex;
     std::vector<std::function<void()>> mDelayedExecutionQueue;
-    std::mutex mDelayedExecutionQueueMutex;
 
     using PrQueue =
         std::priority_queue<std::shared_ptr<VirtualClockEvent>,
@@ -131,6 +130,9 @@ class VirtualClock
     size_t advanceTo(time_point n);
     size_t advanceToNext();
     size_t advanceToNow();
+
+    // timer should be last to ensure it gets destroyed first
+    asio::basic_waitable_timer<std::chrono::system_clock> mRealTimer;
 
   public:
     // A VirtualClock is instantiated in either real or virtual mode. In real

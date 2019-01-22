@@ -9,7 +9,7 @@
 #include "invariant/Invariant.h"
 #include "invariant/InvariantDoesNotHold.h"
 #include "invariant/InvariantManagerImpl.h"
-#include "ledger/LedgerDelta.h"
+#include "ledger/LedgerTxn.h"
 #include "lib/util/format.h"
 #include "main/Application.h"
 #include "util/Logging.h"
@@ -32,7 +32,8 @@ InvariantManager::create(Application& app)
 }
 
 InvariantManagerImpl::InvariantManagerImpl(medida::MetricsRegistry& registry)
-    : mMetricsRegistry(registry)
+    : mInvariantFailureCount(
+          registry.NewCounter({"ledger", "invariant", "failure"}))
 {
 }
 
@@ -40,19 +41,17 @@ Json::Value
 InvariantManagerImpl::getJsonInfo()
 {
     Json::Value failures;
-    for (auto const& invariant : mInvariants)
-    {
-        auto& counter = mMetricsRegistry.NewCounter(
-            {"invariant", "does-not-hold", "count", invariant.first});
-        if (counter.count() > 0)
-        {
-            auto const& info = mFailureInformation.at(invariant.first);
 
-            auto& fail = failures[invariant.first];
-            fail["count"] = (Json::Int64)counter.count();
-            fail["last_failed_on_ledger"] = info.lastFailedOnLedger;
-            fail["last_failed_with_message"] = info.lastFailedWithMessage;
-        }
+    for (auto const& fi : mFailureInformation)
+    {
+        auto& fail = failures[fi.first];
+        auto& info = fi.second;
+        fail["last_failed_on_ledger"] = info.lastFailedOnLedger;
+        fail["last_failed_with_message"] = info.lastFailedWithMessage;
+    }
+    if (!failures.empty())
+    {
+        failures["count"] = (Json::Int64)mInvariantFailureCount.count();
     }
     return failures;
 }
@@ -99,16 +98,17 @@ InvariantManagerImpl::checkOnBucketApply(std::shared_ptr<Bucket const> bucket,
 void
 InvariantManagerImpl::checkOnOperationApply(Operation const& operation,
                                             OperationResult const& opres,
-                                            LedgerDelta const& delta)
+                                            LedgerTxnDelta const& ltxDelta)
 {
-    if (delta.getHeader().ledgerVersion < 8)
+    if (ltxDelta.header.current.ledgerVersion < 8)
     {
         return;
     }
 
     for (auto invariant : mEnabled)
     {
-        auto result = invariant->checkOnOperationApply(operation, opres, delta);
+        auto result =
+            invariant->checkOnOperationApply(operation, opres, ltxDelta);
         if (result.empty())
         {
             continue;
@@ -117,7 +117,8 @@ InvariantManagerImpl::checkOnOperationApply(Operation const& operation,
         auto message = fmt::format(
             R"(Invariant "{}" does not hold on operation: {}{}{})",
             invariant->getName(), result, "\n", xdr::xdr_to_string(operation));
-        onInvariantFailure(invariant, message, delta.getHeader().ledgerSeq);
+        onInvariantFailure(invariant, message,
+                           ltxDelta.header.current.ledgerSeq);
     }
 }
 
@@ -129,8 +130,6 @@ InvariantManagerImpl::registerInvariant(std::shared_ptr<Invariant> invariant)
     if (iter == mInvariants.end())
     {
         mInvariants[name] = invariant;
-        mMetricsRegistry.NewCounter(
-            {"invariant", "does-not-hold", "count", invariant->getName()});
     }
     else
     {
@@ -206,12 +205,8 @@ InvariantManagerImpl::onInvariantFailure(std::shared_ptr<Invariant> invariant,
                                          std::string const& message,
                                          uint32_t ledger)
 {
-    mMetricsRegistry
-        .NewCounter(
-            {"invariant", "does-not-hold", "count", invariant->getName()})
-        .inc();
-    mFailureInformation[invariant->getName()].lastFailedOnLedger = ledger;
-    mFailureInformation[invariant->getName()].lastFailedWithMessage = message;
+    mInvariantFailureCount.inc();
+    mFailureInformation[invariant->getName()] = {ledger, message};
     handleInvariantFailure(invariant, message);
 }
 

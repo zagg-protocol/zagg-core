@@ -6,16 +6,15 @@
 #include "transactions/CreateAccountOpFrame.h"
 #include "OfferExchange.h"
 #include "database/Database.h"
-#include "ledger/LedgerDelta.h"
-#include "ledger/OfferFrame.h"
-#include "ledger/TrustFrame.h"
+#include "ledger/LedgerTxn.h"
+#include "ledger/LedgerTxnEntry.h"
+#include "ledger/LedgerTxnHeader.h"
+#include "transactions/TransactionUtils.h"
 #include "util/Logging.h"
 #include "util/XDROperators.h"
 #include <algorithm>
 
 #include "main/Application.h"
-#include "medida/meter.h"
-#include "medida/metrics_registry.h"
 
 namespace stellar
 {
@@ -31,92 +30,75 @@ CreateAccountOpFrame::CreateAccountOpFrame(Operation const& op,
 }
 
 bool
-CreateAccountOpFrame::doApply(Application& app, LedgerDelta& delta,
-                              LedgerManager& ledgerManager)
+CreateAccountOpFrame::doApply(Application& app, AbstractLedgerTxn& ltx)
 {
-    AccountFrame::pointer destAccount;
-
-    Database& db = ledgerManager.getDatabase();
-
-    destAccount =
-        AccountFrame::loadAccount(delta, mCreateAccount.destination, db);
-    if (!destAccount)
+    if (!stellar::loadAccount(ltx, mCreateAccount.destination))
     {
-        if (mCreateAccount.startingBalance < ledgerManager.getMinBalance(0))
+        auto header = ltx.loadHeader();
+        if (mCreateAccount.startingBalance < getMinBalance(header, 0))
         { // not over the minBalance to make an account
-            app.getMetrics()
-                .NewMeter({"op-create-account", "failure", "low-reserve"},
-                          "operation")
-                .Mark();
             innerResult().code(CREATE_ACCOUNT_LOW_RESERVE);
             return false;
         }
         else
         {
-            if (mSourceAccount->getAvailableBalance(ledgerManager) <
+            bool doesAccountExist = true;
+            if (header.current().ledgerVersion < 8)
+            {
+                LedgerKey key(ACCOUNT);
+                key.account().accountID = getSourceID();
+                doesAccountExist = (bool)ltx.loadWithoutRecord(key);
+            }
+
+            auto sourceAccount = loadSourceAccount(ltx, header);
+            if (getAvailableBalance(header, sourceAccount) <
                 mCreateAccount.startingBalance)
             { // they don't have enough to send
-                app.getMetrics()
-                    .NewMeter({"op-create-account", "failure", "underfunded"},
-                              "operation")
-                    .Mark();
                 innerResult().code(CREATE_ACCOUNT_UNDERFUNDED);
                 return false;
             }
 
-            auto ok = mSourceAccount->addBalance(
-                -mCreateAccount.startingBalance, ledgerManager);
+            if (!doesAccountExist)
+            {
+                throw std::runtime_error(
+                    "modifying account that does not exist");
+            }
+
+            auto ok = addBalance(header, sourceAccount,
+                                 -mCreateAccount.startingBalance);
             assert(ok);
 
-            mSourceAccount->storeChange(delta, db);
+            LedgerEntry newAccountEntry;
+            newAccountEntry.data.type(ACCOUNT);
+            auto& newAccount = newAccountEntry.data.account();
+            newAccount.thresholds[0] = 1;
+            newAccount.accountID = mCreateAccount.destination;
+            newAccount.seqNum = getStartingSequenceNumber(header);
+            newAccount.balance = mCreateAccount.startingBalance;
+            ltx.create(newAccountEntry);
 
-            destAccount = make_shared<AccountFrame>(mCreateAccount.destination);
-            auto& acc = destAccount->getAccount();
-            acc.seqNum = delta.getHeaderFrame().getStartingSequenceNumber();
-            acc.balance = mCreateAccount.startingBalance;
-
-            destAccount->storeAdd(delta, db);
-
-            app.getMetrics()
-                .NewMeter({"op-create-account", "success", "apply"},
-                          "operation")
-                .Mark();
             innerResult().code(CREATE_ACCOUNT_SUCCESS);
             return true;
         }
     }
     else
     {
-        app.getMetrics()
-            .NewMeter({"op-create-account", "failure", "already-exist"},
-                      "operation")
-            .Mark();
         innerResult().code(CREATE_ACCOUNT_ALREADY_EXIST);
         return false;
     }
 }
 
 bool
-CreateAccountOpFrame::doCheckValid(Application& app)
+CreateAccountOpFrame::doCheckValid(Application& app, uint32_t ledgerVersion)
 {
     if (mCreateAccount.startingBalance <= 0)
     {
-        app.getMetrics()
-            .NewMeter(
-                {"op-create-account", "invalid", "malformed-negative-balance"},
-                "operation")
-            .Mark();
         innerResult().code(CREATE_ACCOUNT_MALFORMED);
         return false;
     }
 
     if (mCreateAccount.destination == getSourceID())
     {
-        app.getMetrics()
-            .NewMeter({"op-create-account", "invalid",
-                       "malformed-destination-equals-source"},
-                      "operation")
-            .Mark();
         innerResult().code(CREATE_ACCOUNT_MALFORMED);
         return false;
     }

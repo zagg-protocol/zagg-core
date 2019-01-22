@@ -1,15 +1,21 @@
-[![Build Status](https://travis-ci.org/stellar/stellar-core.svg?branch=auto)](https://travis-ci.org/stellar/stellar-core)
+# What is ZAGG Protocol?
 
+ZAGG Protocol’s implementation of enterprise-grade privacy on public blockchain is designed to drive blockchain to mainstream enterprise-oriented payments and settlement use cases.
+ZAGG Protocol is building a novel privacy-preserving Blockchain. Innovations in ZAGG Protocol bring privacy to public blockchain through a hybrid model of tracking assets and values on the blockchain with both Accounts and UTXOs.This solution adapts the privacy and robustness of the UTXO model’s construct to build a flexible and programmable account-based blockchain.
 
-# stellar-core
+ZAGG Protocol is based on [stellar](https://github.com/stellar) and [Bitcoin](https://github.com/bitcoin/bitcoin) code, it intends to add enterprise-grade privacy through Zero Knowledge Proofs (ZKPs).
 
 Stellar-core is a replicated state machine that maintains a local copy of a cryptographic ledger and processes transactions against it, in consensus with a set of peers.
 It implements the [Stellar Consensus Protocol](https://github.com/stellar/stellar-core/blob/master/src/scp/readme.md), a _federated_ consensus protocol.
 It is written in C++14 and runs on Linux, OSX and Windows.
 Learn more by reading the [overview document](https://github.com/stellar/stellar-core/blob/master/docs/readme.md).
 
-# Documentation
+Technical details of ZAGG Protocol are available in the [protocol document](www.zaggprotocol.com).
 
+Learn more by reading the [overview document]() //under docs section
+
+
+# Documentation
 Documentation of the code's layout and abstractions, as well as for the
 functionality available, can be found in
 [`./docs`](https://github.com/stellar/stellar-core/tree/master/docs).
@@ -87,5 +93,3 @@ Then, running
 * `stellar-core --test [stress]` will run all the stress tests,
 * `stellar-core --test [foo-stress]` will run the stress tests for subsystem foo alone, and
 * neither `stellar-core --test` nor `stellar-core --test [foo]` will run stress tests.
-
-

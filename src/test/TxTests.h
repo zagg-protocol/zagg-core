@@ -6,17 +6,15 @@
 
 #include "crypto/SecretKey.h"
 #include "herder/LedgerCloseData.h"
-#include "ledger/AccountFrame.h"
-#include "ledger/OfferFrame.h"
-#include "ledger/TrustFrame.h"
 #include "overlay/StellarXDR.h"
 #include "test/TestPrinter.h"
 #include "util/optional.h"
 
 namespace stellar
 {
+class AbstractLedgerTxn;
+class ConstLedgerTxnEntry;
 class TransactionFrame;
-class LedgerDelta;
 class OperationFrame;
 class TxSetFrame;
 
@@ -28,17 +26,14 @@ typedef std::vector<std::pair<TransactionResultPair, LedgerEntryChanges>>
 
 struct ExpectedOpResult
 {
-    OperationResultCode code;
-    OperationType type;
-    CreateAccountResultCode createAccountCode;
-    PaymentResultCode paymentCode;
-    AccountMergeResultCode accountMergeCode;
-    SetOptionsResultCode setOptionsResultCode;
+    OperationResult mOperationResult;
 
     ExpectedOpResult(OperationResultCode code);
     ExpectedOpResult(CreateAccountResultCode createAccountCode);
     ExpectedOpResult(PaymentResultCode paymentCode);
     ExpectedOpResult(AccountMergeResultCode accountMergeCode);
+    ExpectedOpResult(AccountMergeResultCode accountMergeCode,
+                     int64_t sourceAccountBalance);
     ExpectedOpResult(SetOptionsResultCode setOptionsResultCode);
 };
 
@@ -86,18 +81,10 @@ SecretKey getAccount(const char* n);
 
 Signer makeSigner(SecretKey key, int weight);
 
-// shorthand to load an existing account
-AccountFrame::pointer loadAccount(PublicKey const& k, Application& app,
-                                  bool mustExist = true);
+ConstLedgerTxnEntry loadAccount(AbstractLedgerTxn& ltx, PublicKey const& k,
+                                bool mustExist = true);
 
-// short hand to check that an account does not exist
-void requireNoAccount(PublicKey const& k, Application& app);
-
-OfferFrame::pointer loadOffer(PublicKey const& k, uint64 offerID,
-                              Application& app, bool mustExist);
-
-TrustFrame::pointer loadTrustLine(SecretKey const& k, Asset const& asset,
-                                  Application& app, bool mustExist = true);
+bool doesAccountExist(Application& app, PublicKey const& k);
 
 xdr::xvector<Signer, 20> getAccountSigners(PublicKey const& k,
                                            Application& app);

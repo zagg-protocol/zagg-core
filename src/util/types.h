@@ -15,6 +15,8 @@ namespace stellar
 {
 typedef std::vector<unsigned char> Blob;
 
+LedgerKey LedgerEntryKey(LedgerEntry const& e);
+
 bool isZero(uint256 const& b);
 
 Hash& operator^=(Hash& l, Hash const& r);
@@ -33,6 +35,8 @@ AccountID getIssuer(Asset const& asset);
 
 // returns true if the currencies are the same
 bool compareAsset(Asset const& first, Asset const& second);
+
+std::string formatSize(size_t size);
 
 template <uint32_t N>
 void

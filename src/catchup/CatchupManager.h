@@ -30,20 +30,10 @@ class CatchupManager
 
     // Run catchup with given configuration and verify mode.
     virtual void catchupHistory(CatchupConfiguration catchupConfiguration,
-                                bool manualCatchup,
                                 CatchupWork::ProgressHandler handler) = 0;
 
     // Return status of catchup for or empty string, if no catchup in progress
     virtual std::string getStatus() const = 0;
-
-    // Return the number of times the process has commenced catchup.
-    virtual uint64_t getCatchupStartCount() const = 0;
-
-    // Return the number of times the catchup has completed successfully.
-    virtual uint64_t getCatchupSuccessCount() const = 0;
-
-    // Return the number of times the catchup has failed.
-    virtual uint64_t getCatchupFailureCount() const = 0;
 
     // Emit a log message and set StatusManager HISTORY_CATCHUP status to
     // describe current catchup state. The `contiguous` argument is passed in

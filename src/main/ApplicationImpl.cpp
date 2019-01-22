@@ -20,12 +20,12 @@
 #include "history/HistoryManager.h"
 #include "invariant/AccountSubEntriesCountIsValid.h"
 #include "invariant/BucketListIsConsistentWithDatabase.h"
-#include "invariant/CacheIsConsistentWithDatabase.h"
 #include "invariant/ConservationOfLumens.h"
 #include "invariant/InvariantManager.h"
 #include "invariant/LedgerEntryIsValid.h"
 #include "invariant/LiabilitiesMatchOffers.h"
 #include "ledger/LedgerManager.h"
+#include "ledger/LedgerTxn.h"
 #include "main/CommandHandler.h"
 #include "main/ExternalQueue.h"
 #include "main/Maintainer.h"
@@ -42,6 +42,7 @@
 #include "scp/LocalNode.h"
 #include "scp/QuorumSetUtils.h"
 #include "simulation/LoadGenerator.h"
+#include "util/GlobalChecks.h"
 #include "util/StatusManager.h"
 #include "work/WorkManager.h"
 
@@ -63,12 +64,11 @@ ApplicationImpl::ApplicationImpl(VirtualClock& clock, Config const& cfg)
     , mWork(std::make_unique<asio::io_service::work>(mWorkerIOService))
     , mWorkerThreads()
     , mStopSignals(clock.getIOService(), SIGINT)
+    , mStarted(false)
     , mStopping(false)
     , mStoppingTimer(*this)
     , mMetrics(std::make_unique<medida::MetricsRegistry>())
     , mAppStateCurrent(mMetrics->NewCounter({"app", "state", "current"}))
-    , mAppStateChanges(mMetrics->NewTimer({"app", "state", "changes"}))
-    , mLastStateChange(clock.now())
     , mStartedOn(clock.now())
 {
 #ifdef SIGQUIT
@@ -104,8 +104,6 @@ ApplicationImpl::initialize()
 {
     mDatabase = std::make_unique<Database>(*this);
     mPersistentState = std::make_unique<PersistentState>(*this);
-    mTmpDirManager =
-        std::make_unique<TmpDirManager>(mConfig.BUCKET_DIR_PATH + "/tmp");
     mOverlayManager = createOverlayManager();
     mLedgerManager = LedgerManager::create(*this);
     mHerder = createHerder();
@@ -121,10 +119,11 @@ ApplicationImpl::initialize()
     mWorkManager = WorkManager::create(*this);
     mBanManager = BanManager::create(*this);
     mStatusManager = std::make_unique<StatusManager>();
+    mLedgerTxnRoot = std::make_unique<LedgerTxnRoot>(
+        *mDatabase, mConfig.ENTRY_CACHE_SIZE, mConfig.BEST_OFFERS_CACHE_SIZE);
 
     BucketListIsConsistentWithDatabase::registerInvariant(*this);
     AccountSubEntriesCountIsValid::registerInvariant(*this);
-    CacheIsConsistentWithDatabase::registerInvariant(*this);
     ConservationOfLumens::registerInvariant(*this);
     LedgerEntryIsValid::registerInvariant(*this);
     LiabilitiesMatchOffers::registerInvariant(*this);
@@ -223,14 +222,12 @@ ApplicationImpl::getJsonInfo()
 
     auto& info = root["info"];
 
-    if (getConfig().UNSAFE_QUORUM)
-        info["UNSAFE_QUORUM"] = "UNSAFE QUORUM ALLOWED";
     info["build"] = STELLAR_CORE_VERSION;
     info["protocol_version"] = getConfig().LEDGER_PROTOCOL_VERSION;
     info["state"] = getStateHuman();
     info["startedOn"] = VirtualClock::pointToISOString(mStartedOn);
-    info["ledger"]["num"] = (int)lm.getLedgerNum();
     auto const& lcl = lm.getLastClosedLedgerHeader();
+    info["ledger"]["num"] = (int)lcl.header.ledgerSeq;
     info["ledger"]["hash"] = binToHex(lcl.hash);
     info["ledger"]["closeTime"] = (Json::UInt64)lcl.header.scpValue.closeTime;
     info["ledger"]["version"] = lcl.header.ledgerVersion;
@@ -264,11 +261,8 @@ ApplicationImpl::getJsonInfo()
         info["invariant_failures"] = invariantFailures;
     }
 
-    auto historyArchiveInfo = getHistoryArchiveManager().getJsonInfo();
-    if (!historyArchiveInfo.empty())
-    {
-        info["history"] = historyArchiveInfo;
-    }
+    info["history_failure_rate"] =
+        fmt::format("{:.2}", getHistoryArchiveManager().getFailureRate());
 
     return root;
 }
@@ -312,6 +306,13 @@ ApplicationImpl::timeNow()
 void
 ApplicationImpl::start()
 {
+    if (mStarted)
+    {
+        CLOG(INFO, "Ledger") << "Skipping application start up";
+        return;
+    }
+    CLOG(INFO, "Ledger") << "Starting up application";
+    mStarted = true;
     mDatabase->upgradeToCurrentSchema();
 
     if (mConfig.TESTING_UPGRADE_DATETIME.time_since_epoch().count() != 0)
@@ -499,16 +500,6 @@ ApplicationImpl::getLoadGenerator()
 }
 
 void
-ApplicationImpl::checkDB()
-{
-    getClock().getIOService().post([this] {
-        checkDBAgainstBuckets(this->getMetrics(), this->getBucketManager(),
-                              this->getDatabase(),
-                              this->getBucketManager().getBucketList());
-    });
-}
-
-void
 ApplicationImpl::applyCfgCommands()
 {
     for (auto cmd : mConfig.COMMANDS)
@@ -590,9 +581,6 @@ ApplicationImpl::syncOwnMetrics()
     if (c != n)
     {
         mAppStateCurrent.set_count(n);
-        auto now = mVirtualClock.now();
-        mAppStateChanges.Update(now - mLastStateChange);
-        mLastStateChange = now;
     }
 
     // Flush crypto pure-global-cache stats. They don't belong
@@ -635,7 +623,7 @@ ApplicationImpl::clearMetrics(std::string const& domain)
 TmpDirManager&
 ApplicationImpl::getTmpDirManager()
 {
-    return *mTmpDirManager;
+    return getBucketManager().getTmpDirManager();
 }
 
 LedgerManager&
@@ -789,5 +777,12 @@ std::unique_ptr<OverlayManager>
 ApplicationImpl::createOverlayManager()
 {
     return OverlayManager::create(*this);
+}
+
+LedgerTxnRoot&
+ApplicationImpl::getLedgerTxnRoot()
+{
+    assertThreadIsMain();
+    return *mLedgerTxnRoot;
 }
 }

@@ -17,9 +17,6 @@
 #include "util/Logging.h"
 #include "util/Timer.h"
 
-#include "medida/counter.h"
-#include "medida/metrics_registry.h"
-
 #include <algorithm>
 #include <functional>
 #include <iterator>
@@ -488,7 +485,7 @@ void
 ProcessExitEvent::Impl::run()
 {
     auto manager = mProcManagerImpl.lock();
-    assert(!manager->isShutdown());
+    assert(manager && !manager->isShutdown());
     if (mRunning)
     {
         CLOG(ERROR, "Process") << "ProcessExitEvent::Impl already running";

@@ -16,15 +16,9 @@
 #include "crypto/Random.h"
 #include "crypto/SHA.h"
 #include "database/Database.h"
-#include "ledger/AccountFrame.h"
-#include "ledger/DataFrame.h"
-#include "ledger/EntryFrame.h"
-#include "ledger/LedgerDelta.h"
-#include "ledger/OfferFrame.h"
-#include "ledger/TrustFrame.h"
 #include "lib/util/format.h"
 #include "main/Application.h"
-#include "medida/medida.h"
+#include "medida/timer.h"
 #include "util/Fs.h"
 #include "util/LogSlowExecution.h"
 #include "util/Logging.h"
@@ -45,6 +39,7 @@ Bucket::Bucket(std::string const& filename, Hash const& hash)
     {
         CLOG(TRACE, "Bucket")
             << "Bucket::Bucket() created, file exists : " << mFilename;
+        mSize = fs::size(filename);
     }
 }
 
@@ -62,6 +57,12 @@ std::string const&
 Bucket::getFilename() const
 {
     return mFilename;
+}
+
+size_t
+Bucket::getSize() const
+{
+    return mSize;
 }
 
 bool
@@ -101,24 +102,20 @@ Bucket::countLiveAndDeadEntries() const
 }
 
 void
-Bucket::apply(Database& db) const
+Bucket::apply(Application& app) const
 {
-    BucketApplicator applicator(db, shared_from_this());
+    BucketApplicator applicator(app, shared_from_this());
     while (applicator)
     {
         applicator.advance();
     }
 }
 
-std::shared_ptr<Bucket>
-Bucket::fresh(BucketManager& bucketManager,
-              std::vector<LedgerEntry> const& liveEntries,
-              std::vector<LedgerKey> const& deadEntries)
+std::vector<BucketEntry>
+Bucket::convertToBucketEntry(std::vector<LedgerEntry> const& liveEntries)
 {
-    std::vector<BucketEntry> live, dead, combined;
+    std::vector<BucketEntry> live;
     live.reserve(liveEntries.size());
-    dead.reserve(deadEntries.size());
-
     for (auto const& e : liveEntries)
     {
         BucketEntry ce;
@@ -126,7 +123,15 @@ Bucket::fresh(BucketManager& bucketManager,
         ce.liveEntry() = e;
         live.push_back(ce);
     }
+    std::sort(live.begin(), live.end(), BucketEntryIdCmp());
+    return live;
+}
 
+std::vector<BucketEntry>
+Bucket::convertToBucketEntry(std::vector<LedgerKey> const& deadEntries)
+{
+    std::vector<BucketEntry> dead;
+    dead.reserve(deadEntries.size());
     for (auto const& e : deadEntries)
     {
         BucketEntry ce;
@@ -134,10 +139,17 @@ Bucket::fresh(BucketManager& bucketManager,
         ce.deadEntry() = e;
         dead.push_back(ce);
     }
-
-    std::sort(live.begin(), live.end(), BucketEntryIdCmp());
-
     std::sort(dead.begin(), dead.end(), BucketEntryIdCmp());
+    return dead;
+}
+
+std::shared_ptr<Bucket>
+Bucket::fresh(BucketManager& bucketManager,
+              std::vector<LedgerEntry> const& liveEntries,
+              std::vector<LedgerKey> const& deadEntries)
+{
+    auto live = convertToBucketEntry(liveEntries);
+    auto dead = convertToBucketEntry(deadEntries);
 
     BucketOutputIterator liveOut(bucketManager.getTmpDir(), true);
     BucketOutputIterator deadOut(bucketManager.getTmpDir(), true);
@@ -248,121 +260,5 @@ Bucket::merge(BucketManager& bucketManager,
         }
     }
     return out.getBucket(bucketManager);
-}
-
-static void
-compareSizes(std::string const& objType, uint64_t inDatabase,
-             uint64_t inBucketlist)
-{
-    if (inDatabase != inBucketlist)
-    {
-        throw std::runtime_error(fmt::format(
-            "{} object count mismatch: DB has {}, BucketList has {}", objType,
-            inDatabase, inBucketlist));
-    }
-}
-
-// FIXME issue NNN: this should be refactored to run in a read-transaction on a
-// background thread and take a soci::session& rather than Database&. For now we
-// code it to run on main thread because there's a bunch of code to move around
-// in the ledger frames and db layer to make that work.
-
-void
-checkDBAgainstBuckets(medida::MetricsRegistry& metrics,
-                      BucketManager& bucketManager, Database& db,
-                      BucketList& bl)
-{
-    CLOG(INFO, "Bucket") << "CheckDB starting";
-    auto execTimer =
-        metrics.NewTimer({"bucket", "checkdb", "execute"}).TimeScope();
-
-    // Step 1: Collect all buckets to merge.
-    std::vector<std::shared_ptr<Bucket>> buckets;
-    for (uint32_t i = 0; i < BucketList::kNumLevels; ++i)
-    {
-        CLOG(INFO, "Bucket") << "CheckDB collecting buckets from level " << i;
-        auto& level = bl.getLevel(i);
-        auto& next = level.getNext();
-        if (next.isLive())
-        {
-            CLOG(INFO, "Bucket")
-                << "CheckDB resolving future bucket on level " << i;
-            buckets.push_back(next.resolve());
-        }
-        buckets.push_back(level.getCurr());
-        buckets.push_back(level.getSnap());
-    }
-
-    if (buckets.empty())
-    {
-        CLOG(INFO, "Bucket") << "CheckDB found no buckets, returning";
-        return;
-    }
-
-    // Step 2: merge all buckets into a single super-bucket.
-    auto i = buckets.begin();
-    assert(i != buckets.end());
-    std::shared_ptr<Bucket> superBucket = *i;
-    while (++i != buckets.end())
-    {
-        auto mergeTimer =
-            metrics.NewTimer({"bucket", "checkdb", "merge"}).TimeScope();
-        assert(superBucket);
-        assert(*i);
-        superBucket = Bucket::merge(bucketManager, *i, superBucket);
-        assert(superBucket);
-    }
-
-    CLOG(INFO, "Bucket") << "CheckDB starting object comparison";
-
-    // Step 3: scan the superbucket, checking each object against the DB and
-    // counting objects along the way.
-    uint64_t nAccounts = 0, nTrustLines = 0, nOffers = 0, nData = 0;
-    {
-        auto& meter = metrics.NewMeter({"bucket", "checkdb", "object-compare"},
-                                       "comparison");
-        auto compareTimer =
-            metrics.NewTimer({"bucket", "checkdb", "compare"}).TimeScope();
-        for (BucketInputIterator iter(superBucket); iter; ++iter)
-        {
-            meter.Mark();
-            auto& e = *iter;
-            if (e.type() == LIVEENTRY)
-            {
-                switch (e.liveEntry().data.type())
-                {
-                case ACCOUNT:
-                    ++nAccounts;
-                    break;
-                case TRUSTLINE:
-                    ++nTrustLines;
-                    break;
-                case OFFER:
-                    ++nOffers;
-                    break;
-                case DATA:
-                    ++nData;
-                    break;
-                }
-                auto s = EntryFrame::checkAgainstDatabase(e.liveEntry(), db);
-                if (!s.empty())
-                {
-                    throw std::runtime_error{s};
-                }
-                if (meter.count() % 100 == 0)
-                {
-                    CLOG(INFO, "Bucket")
-                        << "CheckDB compared " << meter.count() << " objects";
-                }
-            }
-        }
-    }
-
-    // Step 4: confirm size of datasets matches size of datasets in DB.
-    soci::session& sess = db.getSession();
-    compareSizes("account", AccountFrame::countObjects(sess), nAccounts);
-    compareSizes("trustline", TrustFrame::countObjects(sess), nTrustLines);
-    compareSizes("offer", OfferFrame::countObjects(sess), nOffers);
-    compareSizes("data", DataFrame::countObjects(sess), nData);
 }
 }

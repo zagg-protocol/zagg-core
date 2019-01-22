@@ -5,15 +5,18 @@
 #include "util/asio.h"
 #include "bucket/BucketApplicator.h"
 #include "bucket/Bucket.h"
-#include "ledger/LedgerDelta.h"
+#include "ledger/LedgerTxn.h"
+#include "ledger/LedgerTxnEntry.h"
+#include "main/Application.h"
 #include "util/Logging.h"
+#include "util/types.h"
 
 namespace stellar
 {
 
-BucketApplicator::BucketApplicator(Database& db,
+BucketApplicator::BucketApplicator(Application& app,
                                    std::shared_ptr<const Bucket> bucket)
-    : mDb(db), mBucketIter(bucket)
+    : mApp(app), mBucketIter(bucket)
 {
 }
 
@@ -22,40 +25,57 @@ BucketApplicator::operator bool() const
     return (bool)mBucketIter;
 }
 
-void
+size_t
+BucketApplicator::pos()
+{
+    return mBucketIter.pos();
+}
+
+size_t
+BucketApplicator::size() const
+{
+    return mBucketIter.size();
+}
+
+size_t
 BucketApplicator::advance()
 {
-    soci::transaction sqlTx(mDb.getSession());
-    while (mBucketIter)
-    {
-        LedgerHeader lh;
-        LedgerDelta delta(lh, mDb, false);
+    size_t count = 0;
 
-        auto const& entry = *mBucketIter;
-        if (entry.type() == LIVEENTRY)
+    LedgerTxn ltx(mApp.getLedgerTxnRoot(), false);
+    for (; mBucketIter; ++mBucketIter)
+    {
+        if ((*mBucketIter).type() == LIVEENTRY)
         {
-            EntryFrame::pointer ep = EntryFrame::FromXDR(entry.liveEntry());
-            ep->storeAddOrChange(delta, mDb);
+            auto const& bucketEntry = (*mBucketIter).liveEntry();
+            auto key = LedgerEntryKey(bucketEntry);
+            auto entry = ltx.load(key);
+            if (entry)
+            {
+                entry.current() = bucketEntry;
+            }
+            else
+            {
+                ltx.create(bucketEntry);
+            }
         }
         else
         {
-            EntryFrame::storeDelete(delta, mDb, entry.deadEntry());
+            auto entry = ltx.load((*mBucketIter).deadEntry());
+            if (entry)
+            {
+                entry.erase();
+            }
         }
-        ++mBucketIter;
-        // No-op, just to avoid needless rollback.
-        delta.commit();
-        if ((++mSize & 0xff) == 0xff)
+
+        if ((++count & 0xff) == 0xff)
         {
             break;
         }
     }
-    sqlTx.commit();
-    mDb.clearPreparedStatementCache();
+    ltx.commit();
 
-    if (!mBucketIter || (mSize & 0xfff) == 0xfff)
-    {
-        CLOG(INFO, "Bucket")
-            << "Bucket-apply: committed " << mSize << " entries";
-    }
+    mCount += count;
+    return count;
 }
 }

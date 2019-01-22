@@ -4,7 +4,8 @@
 
 #include "crypto/Hex.h"
 #include "crypto/SignerKey.h"
-#include "ledger/LedgerDelta.h"
+#include "ledger/LedgerTxn.h"
+#include "ledger/LedgerTxnHeader.h"
 #include "test/TestAccount.h"
 #include "test/TestMarket.h"
 #include "test/TestUtils.h"
@@ -97,11 +98,20 @@ TEST_CASE("txresults", "[tx][txresults]")
     app->start();
 
     auto& lm = app->getLedgerManager();
-    auto& clh = lm.getCurrentLedgerHeader();
-    clh.scpValue.closeTime = 10;
-    const int64_t baseReserve = clh.baseReserve;
-    const int64_t baseFee = clh.baseFee;
+    const int64_t baseReserve = lm.getLastReserve();
+    const int64_t baseFee = lm.getLastTxFee();
     const int64_t startAmount = baseReserve * 100;
+
+    {
+        LedgerTxn ltx(app->getLedgerTxnRoot());
+        ltx.loadHeader().current().scpValue.closeTime = 10;
+        ltx.commit();
+    }
+
+    auto getCloseTime = [&] {
+        LedgerTxn ltx(app->getLedgerTxnRoot());
+        return ltx.loadHeader().current().scpValue.closeTime;
+    };
 
     auto amount = [&](PaymentValidity t) {
         switch (t)
@@ -239,7 +249,9 @@ TEST_CASE("txresults", "[tx][txresults]")
 
         auto anyFail = std::any_of(
             std::begin(opResults), std::end(opResults), [](ExpectedOpResult o) {
-                return o.code != opINNER || o.paymentCode != PAYMENT_SUCCESS;
+                return o.mOperationResult.code() != opINNER ||
+                       o.mOperationResult.tr().paymentResult().code() !=
+                           PAYMENT_SUCCESS;
             });
         return expectedResult(fee, opPayment.size(),
                               anyFail ? txFAILED : validationResult.code,
@@ -254,7 +266,7 @@ TEST_CASE("txresults", "[tx][txresults]")
     auto d = root.create("d", startAmount);
     auto e = root.create("e", startAmount);
     auto f = TestAccount{*app, getAccount("f")};
-    auto g = root.create("g", lm.getMinBalance(0));
+    auto g = root.create("g", lm.getLastMinBalance(0));
 
     SECTION("transaction errors")
     {
@@ -272,7 +284,7 @@ TEST_CASE("txresults", "[tx][txresults]")
             {
                 auto tx = a.tx({payment(root, 1)});
                 tx->getEnvelope().tx.timeBounds.activate().minTime =
-                    clh.scpValue.closeTime + 1;
+                    getCloseTime() + 1;
                 for_all_versions(*app, [&] {
                     validateTxResults(tx, *app, {baseFee, txTOO_EARLY});
                 });
@@ -282,7 +294,7 @@ TEST_CASE("txresults", "[tx][txresults]")
             {
                 auto tx = a.tx({payment(root, 1)});
                 tx->getEnvelope().tx.timeBounds.activate().maxTime =
-                    clh.scpValue.closeTime - 1;
+                    getCloseTime() - 1;
                 for_all_versions(*app, [&] {
                     validateTxResults(tx, *app, {baseFee, txTOO_LATE});
                 });
@@ -341,7 +353,7 @@ TEST_CASE("txresults", "[tx][txresults]")
                 auto tx = a.tx({payment(root, 1)});
                 tx->getEnvelope().signatures.clear();
                 tx->getEnvelope().tx.timeBounds.activate().minTime =
-                    clh.scpValue.closeTime + 1;
+                    getCloseTime() + 1;
                 for_all_versions(*app, [&] {
                     validateTxResults(tx, *app, {baseFee, txTOO_EARLY});
                 });
@@ -352,7 +364,7 @@ TEST_CASE("txresults", "[tx][txresults]")
                 auto tx = a.tx({payment(root, 1)});
                 tx->getEnvelope().signatures.clear();
                 tx->getEnvelope().tx.timeBounds.activate().maxTime =
-                    clh.scpValue.closeTime - 1;
+                    getCloseTime() - 1;
                 for_all_versions(*app, [&] {
                     validateTxResults(tx, *app, {baseFee, txTOO_LATE});
                 });
@@ -421,7 +433,7 @@ TEST_CASE("txresults", "[tx][txresults]")
                 auto tx = a.tx({payment(root, 1)});
                 tx->addSignature(a);
                 tx->getEnvelope().tx.timeBounds.activate().minTime =
-                    clh.scpValue.closeTime + 1;
+                    getCloseTime() + 1;
                 for_all_versions(*app, [&] {
                     validateTxResults(tx, *app, {baseFee, txTOO_EARLY});
                 });
@@ -432,7 +444,7 @@ TEST_CASE("txresults", "[tx][txresults]")
                 auto tx = a.tx({payment(root, 1)});
                 tx->addSignature(a);
                 tx->getEnvelope().tx.timeBounds.activate().maxTime =
-                    clh.scpValue.closeTime - 1;
+                    getCloseTime() - 1;
                 for_all_versions(*app, [&] {
                     validateTxResults(tx, *app, {baseFee, txTOO_LATE});
                 });
@@ -526,10 +538,14 @@ TEST_CASE("txresults", "[tx][txresults]")
                     std::vector<PaymentValidity> const& ops) {
         auto tx = makeTx(signs, ops);
         for_all_versions(*app, [&] {
-            auto validationResult = makeValidationResult(
-                signs, ops, app->getLedgerManager().getCurrentLedgerVersion());
-            auto applyResult = makeApplyResult(
-                signs, ops, app->getLedgerManager().getCurrentLedgerVersion());
+            uint32_t ledgerVersion = 0;
+            {
+                LedgerTxn ltx(app->getLedgerTxnRoot());
+                ledgerVersion = ltx.loadHeader().current().ledgerVersion;
+            }
+            auto validationResult =
+                makeValidationResult(signs, ops, ledgerVersion);
+            auto applyResult = makeApplyResult(signs, ops, ledgerVersion);
             validateTxResults(tx, *app, validationResult, applyResult);
         });
     };
@@ -564,13 +580,9 @@ TEST_CASE("txresults", "[tx][txresults]")
         {
             auto tx = a.tx({payment(b, 1000), accountMerge(root)});
 
-            auto applyResult =
-                expectedResult(baseFee * 2, 2, txSUCCESS,
-                               {PAYMENT_SUCCESS, ACCOUNT_MERGE_SUCCESS});
-            applyResult.result.results()[1]
-                .tr()
-                .accountMergeResult()
-                .sourceAccountBalance() = startAmount - 1200;
+            auto applyResult = expectedResult(
+                baseFee * 2, 2, txSUCCESS,
+                {PAYMENT_SUCCESS, {ACCOUNT_MERGE_SUCCESS, startAmount - 1200}});
             for_all_versions(*app, [&] {
                 validateTxResults(tx, *app, {baseFee * 2, txSUCCESS},
                                   applyResult);
@@ -582,10 +594,19 @@ TEST_CASE("txresults", "[tx][txresults]")
             auto tx =
                 a.tx({payment(b, 1000), accountMerge(root), payment(c, 1000)});
 
-            for_all_versions(*app, [&] {
+            for_versions_to(7, *app, [&] {
                 validateTxResults(
                     tx, *app, {baseFee * 3, txSUCCESS},
                     expectedResult(baseFee * 3, 3, txINTERNAL_ERROR));
+            });
+            for_versions_from(8, *app, [&] {
+                validateTxResults(
+                    tx, *app, {baseFee * 3, txSUCCESS},
+                    expectedResult(baseFee * 3, 3, txFAILED,
+                                   {PAYMENT_SUCCESS,
+                                    {ACCOUNT_MERGE_SUCCESS,
+                                     startAmount - tx->getFee() - 1000},
+                                    opNO_ACCOUNT}));
             });
         }
     }
@@ -683,7 +704,7 @@ TEST_CASE("txresults", "[tx][txresults]")
 
     SECTION("fees with liabilities")
     {
-        auto acc = root.create("acc", lm.getMinBalance(1) + baseFee + 1000);
+        auto acc = root.create("acc", lm.getLastMinBalance(1) + baseFee + 1000);
         auto native = makeNativeAsset();
         auto cur1 = acc.asset("CUR1");
 

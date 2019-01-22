@@ -16,6 +16,10 @@
 #include <sodium.h>
 #include <type_traits>
 
+#ifdef MSAN_ENABLED
+#include <sanitizer/msan_interface.h>
+#endif
+
 namespace stellar
 {
 
@@ -139,7 +143,9 @@ SecretKey::random()
     {
         throw std::runtime_error("error generating random secret key");
     }
-
+#ifdef MSAN_ENABLED
+    __msan_unpoison(out.key.data(), out.key.size());
+#endif
     return sk;
 }
 
@@ -249,7 +255,7 @@ KeyFunctions<PublicKey>::getKeyValue(PublicKey& key)
 {
     switch (key.type())
     {
-    case SIGNER_KEY_TYPE_ED25519:
+    case PUBLIC_KEY_TYPE_ED25519:
         return key.ed25519();
     default:
         throw std::invalid_argument("invalid public key type");
@@ -261,7 +267,7 @@ KeyFunctions<PublicKey>::getKeyValue(PublicKey const& key)
 {
     switch (key.type())
     {
-    case SIGNER_KEY_TYPE_ED25519:
+    case PUBLIC_KEY_TYPE_ED25519:
         return key.ed25519();
     default:
         throw std::invalid_argument("invalid public key type");
