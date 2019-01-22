@@ -264,6 +264,18 @@ soci_CFLAGS='-isystem $(top_srcdir)/lib/soci/src/core'
 soci_CFLAGS="$soci_CFLAGS "'-isystem $(top_srcdir)/lib/soci/src/backends/sqlite3'
 soci_LIBS='$(top_builddir)/lib/libsoci.a'
 utxo_LIBS='$(top_builddir)/utxo/lib/libutxo.a'
+bitcoin_util_LIBS='$(top_builddir)/lib/bitcoin/src/libbitcoin_util.a'
+libbitcoin_server_LIBS='$(top_builddir)/lib/bitcoin/src/libbitcoin_server.a'
+libbitcoin_consensus_LIBS='$(top_builddir)/lib/bitcoin/src/libbitcoin_consensus.a'
+# libbitcoin_cli_LIBS='$(top_builddir)/lib/bitcoin/src/libbitcoin_cli.a'
+libbitcoin_common_LIBS='$(top_builddir)/lib/bitcoin/src/libbitcoin_common.a'
+
+
+AC_SUBST(bitcoin_util_LIBS)
+AC_SUBST(libbitcoin_server_LIBS)
+AC_SUBST(libbitcoin_consensus_LIBS)
+# AC_SUBST(libbitcoin_cli_LIBS)
+AC_SUBST(libbitcoin_common_LIBS)
 AC_SUBST(soci_CFLAGS)
 AC_SUBST(soci_LIBS)
 AC_SUBST(utxo_LIBS)
