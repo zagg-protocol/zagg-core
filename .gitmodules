@@ -17,3 +17,4 @@
 [submodule "lib/bitcoin"]
 	path = lib/bitcoin
 	url = https://github.com/zagg-protocol/bitzag.git
+	branch = zagg_dev
