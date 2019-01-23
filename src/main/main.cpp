@@ -11,6 +11,8 @@
 #include <sodium/core.h>
 #include <xdrpp/marshal.h>
 
+// #include <init.h>
+
 INITIALIZE_EASYLOGGINGPP
 
 namespace stellar
@@ -28,6 +30,11 @@ int
 main(int argc, char* const* argv)
 {
     using namespace stellar;
+    printf("Step 1");
+    
+    // SetupServerArgs();
+    
+    printf("Step 2");
 
     // Abort when out of memory
     std::set_new_handler(outOfMemory);

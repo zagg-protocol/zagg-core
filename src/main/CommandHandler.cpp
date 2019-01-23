@@ -31,7 +31,6 @@
 
 #include "test/TestAccount.h"
 #include "test/TxTests.h"
-#include "utxo/lib/add.h"
 #include <regex>
 
 using namespace stellar::txtest;
@@ -848,11 +847,6 @@ CommandHandler::ll(std::string const& params, std::string& retStr)
 void
 CommandHandler::tx(std::string const& params, std::string& retStr)
 {
-    //using UTXO library
-     AddClass utxolibobj;
-     CLOG(TRACE, "Bucket") << "UTXO CommandHandler::tx"
-                        << "UTXO Result of value 15, 13: " << utxolibobj.addValues(15,13);
-    
     std::ostringstream output;
 
     const std::string prefix("?blob=");
