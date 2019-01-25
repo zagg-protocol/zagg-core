@@ -12,7 +12,7 @@ Learn more by reading the [overview document](https://github.com/stellar/stellar
 
 Technical details of ZAGG Protocol are available in the [protocol document](www.zaggprotocol.com).
 
-Learn more by reading the [overview document]() //under docs section
+Learn more by reading the [docs](https://github.com/zagg-protocol/docs).
 
 
 # Documentation
