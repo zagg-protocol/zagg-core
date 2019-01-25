@@ -10,7 +10,7 @@ It implements the [Stellar Consensus Protocol](https://github.com/stellar/stella
 It is written in C++14 and runs on Linux, OSX and Windows.
 Learn more by reading the [overview document](https://github.com/stellar/stellar-core/blob/master/docs/readme.md).
 
-Technical details of ZAGG Protocol are available in the [protocol document](www.zaggprotocol.com).
+Technical details of ZAGG Protocol are available in the [protocol document](https://www.zaggprotocol.com).
 
 Learn more by reading the [docs](https://github.com/zagg-protocol/docs).
 
