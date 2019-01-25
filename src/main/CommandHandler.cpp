@@ -875,10 +875,6 @@ CommandHandler::tx(std::string const& params, std::string& retStr)
                 msg.transaction() = envelope;
                 mApp.getOverlayManager().broadcastMessage(msg);
             }
-            AddClass addClass;
-            output << "{"
-                   << "\"status\": "
-                   << "\"" << Herder::TX_STATUS_STRING[status] << "\"";                   
             if (status == Herder::TX_STATUS_ERROR)
             {
                 std::string resultBase64;

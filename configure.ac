@@ -271,15 +271,15 @@ libbitcoin_common_LIBS='$(top_builddir)/lib/bitcoin/src/libbitcoin_common.a'
 libbitcoin_all_LIBS='$(top_builddir)/lib/bitcoin/src/libbitcoin_all.a'
 libbitcoin_CFLAGS='-isystem $(top_builddir)/lib/bitcoin/src/'
 
-AC_SUBST(bitcoin_util_LIBS)
-AC_SUBST(libbitcoin_server_LIBS)
-AC_SUBST(libbitcoin_consensus_LIBS)
-AC_SUBST(libbitcoin_cli_LIBS)
-AC_SUBST(libbitcoin_common_LIBS)
-AC_SUBST(libbitcoin_all_LIBS)
+# AC_SUBST(bitcoin_util_LIBS)
+# AC_SUBST(libbitcoin_server_LIBS)
+# AC_SUBST(libbitcoin_consensus_LIBS)
+# AC_SUBST(libbitcoin_cli_LIBS)
+# AC_SUBST(libbitcoin_common_LIBS)
+# AC_SUBST(libbitcoin_all_LIBS)
 AC_SUBST(soci_CFLAGS)
 AC_SUBST(soci_LIBS)
-AC_SUBST(libbitcoin_CFLAGS)
+# AC_SUBST(libbitcoin_CFLAGS)
 
 libasio_CFLAGS='-DASIO_SEPARATE_COMPILATION=1 -DASIO_STANDALONE -isystem $(top_srcdir)/lib/asio/asio/include'
 AC_SUBST(libasio_CFLAGS)
@@ -313,6 +313,6 @@ esc() {
 ac_configure_args="$ac_configure_args $(esc "CC=$CC" "CXX=$CXX" "CFLAGS=$CFLAGS" "CXXFLAGS=$CXXFLAGS" "LDFLAGS=$LDFLAGS")"
 
 AC_CONFIG_HEADERS(config.h)
-AC_CONFIG_FILES(lib/Makefile src/Makefile Makefile )
+AC_CONFIG_FILES(lib/Makefile src/Makefile Makefile)
 AC_OUTPUT
 
