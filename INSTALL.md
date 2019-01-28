@@ -1,12 +1,15 @@
 #Bitcoin Build Instructions
+
 cd lib/bitcoin
 
 ./autogen.sh
 
 NOTE: change heap size based on your PC memory
+
 ./configure CXXFLAGS="--param ggc-min-expand=1 --param ggc-min-heapsize=65536"  --disable-wallet --without-gui
 
 << -- OR -->>
+
 ./configure CXXFLAGS="--param ggc-min-expand=1 --param ggc-min-heapsize=65536" --disable-zmq --disable-wallet --without-gui --without-miniupnpc
 
 
