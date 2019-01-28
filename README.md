@@ -33,7 +33,7 @@ Please refer to [concepts](https://github.com/zagg-protocol/docs/tree/master/Con
 
 
 
-## Development Approach
+## Development Roadmap
 
 ZAGG Protocol is a fork of [stellar](https://github.com/stellar) adding a UTXO layer along with Zero-Knowledge Proofs to achieve privacy with verifiability. ZAGG Protocol is starting the development from the stable build of Stellar. In the first phase, ZAGG intends to add UTXOs model to existing accounts based stellar. In the next phase, ZAGG Protocol team to build Zero-Knowledge Proofs along with other primitives to achieve transaction privacy.
 
