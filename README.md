@@ -15,14 +15,6 @@ Technical details of ZAGG Protocol are available in the [protocol document](http
 Learn more by reading the [docs](https://github.com/zagg-protocol/docs).
 
 
-# Documentation
-Learn more by reading the [docs](https://github.com/zagg-protocol/docs).
-
-Docs
-==================
-
-This repository hosts all ZAGG Protocol docs and the relevant docs of other projects. The repository is being continuosly updated to give full information on the ZAGG Protocol specifications.
-
 ## ZAGG Protocol
 
 Privacy is one of the biggest hurdles enterprises face while adopting public chains for payments and transactions. Enterprises need the ability to conduct certain transactions confidentially without having to reveal the transaction details. Currently, account-based public chains are used to support arbitrary smart contracts, allowing complex business rules to be executed on the public chain. 
