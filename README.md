@@ -32,22 +32,10 @@ Please refer to [concepts](https://github.com/zagg-protocol/docs/tree/master/Con
 [Business Case & Adoption](https://github.com/zagg-protocol/docs/blob/master/Concepts/business-case.md)
 
 
-## Development
-
-ZAGG Protocol is based on stellar and Bitcoin code, it intends to add enterprise-grade privacy through Zero Knowledge Proofs (ZKPs).
-
-The Protocol details as mentioned here are being implemented as per the below roadmap.
-
-[Implementation Roadmap](https://github.com/zagg-protocol/docs/blob/master/Roadmap.md)
-
-
-ZAGG Protocol is building a novel privacy-preserving Blockchain. Innovations in ZAGG Protocol bring privacy to public blockchain through a hybrid model of tracking assets and values on the blockchain with both Accounts and UTXOs.This solution adapts the privacy and robustness of the UTXO model’s construct to build a flexible and programmable account-based blockchain.
-
-ZAGG Protocol is a fork of [stellar](https://github.com/stellar) adding a UTXO layer along with Zero-Knowledge Proofs to achieve privacy with verifiability. 
 
 ## Development Approach
 
-ZAGG Protocol is starting the development from the stable build of Stellar. In the first phase, ZAGG intends to add UTXOs model to existing accounts based stellar. In the next phase, ZAGG Protocol team to build Zero-Knowledge Proofs along with other primitives to achieve transaction privacy.
+ZAGG Protocol is a fork of [stellar](https://github.com/stellar) adding a UTXO layer along with Zero-Knowledge Proofs to achieve privacy with verifiability. ZAGG Protocol is starting the development from the stable build of Stellar. In the first phase, ZAGG intends to add UTXOs model to existing accounts based stellar. In the next phase, ZAGG Protocol team to build Zero-Knowledge Proofs along with other primitives to achieve transaction privacy.
 
 The full-fledged development plan is as follows:
 
