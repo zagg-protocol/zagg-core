@@ -93,6 +93,15 @@ CommandHandler::CommandHandler(Application& app) : mApp(app)
     addRoute("tx", &CommandHandler::tx);
     addRoute("upgrades", &CommandHandler::upgrades);
     addRoute("unban", &CommandHandler::unban);
+    addRoute("utxo", &CommandHandler::utxoHandler);
+}
+
+
+void 
+
+CommandHandler::utxoHandler(std::string const& name, HandlerRoute route)
+{
+    printf("call bitcoin raw transaction hex functions from here ");    
 }
 
 void

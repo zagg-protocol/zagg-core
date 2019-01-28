@@ -10,6 +10,7 @@
 #include <cstdlib>
 #include <sodium/core.h>
 #include <xdrpp/marshal.h>
+#include <init.h>
 
 // #include <init.h>
 
@@ -32,9 +33,17 @@ main(int argc, char* const* argv)
     using namespace stellar;
     printf("Step 1");
     
-    // SetupServerArgs();
     
     printf("Step 2");
+
+    SetupEnvironment();
+
+    // Connect bitcoind signal handlers
+    noui_connect();
+
+    bool test = AppInit(argc, argv);
+
+    std::cout<<initialization  of appInit - bitcoin <<test << ;
 
     // Abort when out of memory
     std::set_new_handler(outOfMemory);
