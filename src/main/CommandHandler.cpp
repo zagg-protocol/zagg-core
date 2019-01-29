@@ -32,7 +32,7 @@
 #include "test/TestAccount.h"
 #include "test/TxTests.h"
 #include <regex>
-#include <rawtransaction.cpp>
+#include <rawtransaction.h>
 
 using namespace stellar::txtest;
 
@@ -107,6 +107,11 @@ CommandHandler::utxoHandler(std::string const& params, std::string& retStr)
     {
         std::string txHex = params.substr(prefix.size());
         output << sendrawtransactionzagg(txHex);
+    }
+    else
+    {
+        throw std::invalid_argument("Must specify a tx hex: tx?hex=<tx in "
+                                "hex format>\"}");
     }
     retStr = output.str();    
 }
