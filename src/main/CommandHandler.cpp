@@ -32,6 +32,7 @@
 #include "test/TestAccount.h"
 #include "test/TxTests.h"
 #include <regex>
+#include <rawtransaction.cpp>
 
 using namespace stellar::txtest;
 
@@ -97,10 +98,19 @@ CommandHandler::CommandHandler(Application& app) : mApp(app)
 }
 
 
-void
-CommandHandler::utxoHandler(std::string const& params, std::string& retStr){
-    printf("call bitcoin raw transaction hex functions from here ");    
+void 
+CommandHandler::utxoHandler(std::string const& params, std::string& retStr)
+{
+    std::ostringstream output;
+    const std::string prefix("?hex=");
+    if (params.compare(0, prefix.size(), prefix) == 0)
+    {
+        std::string txHex = params.substr(prefix.size());
+        output << sendrawtransactionzagg(txHex);
+    }
+    retStr = output.str();    
 }
+
 
 void
 CommandHandler::addRoute(std::string const& name, HandlerRoute route)
