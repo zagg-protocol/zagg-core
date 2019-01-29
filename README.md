@@ -1,7 +1,11 @@
 # What is ZAGG Protocol?
+> WIP. This is being updated as you read
 
-ZAGG Protocol’s implementation of enterprise-grade privacy on public blockchain is designed to drive blockchain to mainstream enterprise-oriented payments and settlement use cases.
+ZAGG Protocol’s implementation of enterprise-grade privacy on public blockchain is designed to mainstream enterprise-oriented payments and settlement use cases in blockchain.
+
 ZAGG Protocol is building a novel privacy-preserving Blockchain. Innovations in ZAGG Protocol bring privacy to public blockchain through a hybrid model of tracking assets and values on the blockchain with both Accounts and UTXOs.This solution adapts the privacy and robustness of the UTXO model’s construct to build a flexible and programmable account-based blockchain.
+
+Implementing privacy on account-based blockchains without leaking data and securing against double spend is a challenge with existing technology. Innovations in ZAGG Protocol bring privacy to public blockchain through a hybrid model of tracking assets and values on the blockchain with both Accounts and UTXOs. This solution adapts the privacy and robustness of the UTXO model’s construct to build a flexible and programmable account-based blockchain. The protocol also introduces the concept of Integrated subchains that will allow for nodes to privately transact one-to-one or in a coalition group within public chain without side chains/off-chains while allowing for mathematically provable assertions about effects of the private transactions without leaking information about the private transactions or coalitions.
 
 ZAGG Protocol is based on [stellar](https://github.com/stellar) and [Bitcoin](https://github.com/bitcoin/bitcoin) code, it intends to add enterprise-grade privacy through Zero Knowledge Proofs (ZKPs).
 
@@ -12,52 +16,25 @@ Learn more by reading the [overview document](https://github.com/stellar/stellar
 
 Technical details of ZAGG Protocol are available in the [protocol document](https://www.zaggprotocol.com).
 
-Learn more by reading the [docs](https://github.com/zagg-protocol/docs).
 
-
-# Documentation
-Learn more by reading the [docs](https://github.com/zagg-protocol/docs).
-
-Docs
-==================
-
-This repository hosts all ZAGG Protocol docs and the relevant docs of other projects. The repository is being continuosly updated to give full information on the ZAGG Protocol specifications.
-
-## ZAGG Protocol
-
-Privacy is one of the biggest hurdles enterprises face while adopting public chains for payments and transactions. Enterprises need the ability to conduct certain transactions confidentially without having to reveal the transaction details. Currently, account-based public chains are used to support arbitrary smart contracts, allowing complex business rules to be executed on the public chain. 
-
-Implementing privacy on account-based blockchains without leaking data and securing against double spend is a challenge with existing technology. Innovations in ZAGG Protocol bring privacy to public blockchain through a hybrid model of tracking assets and values on the blockchain with both Accounts and UTXOs. This solution adapts the privacy and robustness of the UTXO model’s construct to build a flexible and programmable account-based blockchain. The protocol also introduces the concept of Integrated subchains that will allow for nodes to privately transact one-to-one or in a coalition group within public chain without side chains/off-chains while allowing for mathematically provable assertions about effects of the private transactions without leaking information about the private transactions or coalitions.
-
-Please refer to [concepts](https://github.com/zagg-protocol/docs/tree/master/Concepts) for full understanding of ZAGG Protocol on problem statement, technology solution and business case.
-
-### Quick References
+### Quick References (WIP)
 
 [Introduction](https://github.com/zagg-protocol/docs/blob/master/Concepts/Introduction.md)
 
+ [concepts](https://github.com/zagg-protocol/docs/tree/master/Concepts) 
+ 
 [Protocol Overview](https://github.com/zagg-protocol/docs/blob/master/Concepts/protocol-overview.md)
 
 [Business Case & Adoption](https://github.com/zagg-protocol/docs/blob/master/Concepts/business-case.md)
+Learn more by reading the [docs](https://github.com/zagg-protocol/docs).
 
 
-## Development
 
-ZAGG Protocol is based on stellar and Bitcoin code, it intends to add enterprise-grade privacy through Zero Knowledge Proofs (ZKPs).
-
-The Protocol details as mentioned here are being implemented as per the below roadmap.
-
-[Implementation Roadmap](https://github.com/zagg-protocol/docs/blob/master/Roadmap.md)
-
-
-ZAGG Protocol is building a novel privacy-preserving Blockchain. Innovations in ZAGG Protocol bring privacy to public blockchain through a hybrid model of tracking assets and values on the blockchain with both Accounts and UTXOs.This solution adapts the privacy and robustness of the UTXO model’s construct to build a flexible and programmable account-based blockchain.
-
-ZAGG Protocol is a fork of [stellar](https://github.com/stellar) adding a UTXO layer along with Zero-Knowledge Proofs to achieve privacy with verifiability. 
-
-## Development Approach
+# Development Approach
 
 ZAGG Protocol is starting the development from the stable build of Stellar. In the first phase, ZAGG intends to add UTXOs model to existing accounts based stellar. In the next phase, ZAGG Protocol team to build Zero-Knowledge Proofs along with other primitives to achieve transaction privacy.
 
-The full-fledged development plan is as follows:
+A more detailed development plan is as follows:
 
 ### Protocol V0.0.1 | 
 > Integration of bitcoin code base into the stellar fork to achieve dual accounts balance and UTXO balances.
@@ -67,7 +44,7 @@ The full-fledged development plan is as follows:
 * Dual consensus 
 
 **Description:**
-After this step, User will be able to create a transaction via CLI. Use the data as input to the UTXO route. The communication is not in XDR and it's in either plain text or hex format. Stellar code invokes a call to Bitcoin code base and registers the transaction. The bitcoin mining in a loop as a script. This step is the first step to create one merged running instance of both the protocols as foundation for next level innovations.
+After this step, User will be able to create a transaction via CLI. Use the data as input to the UTXO route. The communication is not in XDR and it's in either plain text or hex format. Stellar code invokes a call to Bitcoin code base and registers the transaction.  This step is the first step to create one merged running instance of both the protocols as foundation for next steps.
 
 
 ### Protocol V0.0.2 | 
@@ -92,26 +69,20 @@ The accounts and shielded UTXOs transactions will be merged so that all the tran
 
 ### Protocol V0.0.6
 > Adding Private networks
+Zagg supports creation of private subnetworks for forming coalitions where the transactions are visible to all the parties but not to the public. All the transactions are verified by the public nodes but cannot be seen by the public nodes.
 
 ### Protocol V0.0.7
 > Adding Smart contracts
+Zagg will increase the capability of smart contracts to enable different business models to operate on the network.
 
 
 
 
-### Repositories
-Currently, ZAGG Protocol Github has the following repositories:
-
-#### ZAGG-Core
 
 
-#### docs
-This repository hosts all ZAGG Protocol docs and the relevant docs of other projects. The repository is being continuosly updated to give full information on the ZAGG Protocol specifications.
+# To be updated
 
-
--------.
-
-
+The installations instructions and running instructions are not yet updated. The following are the instructions to run a standalone stellar node.
 # Installation
 
 See [Installation](./INSTALL.md)
