@@ -1,33 +1,22 @@
 # What is ZAGG Protocol?
 
+Privacy is one of the biggest hurdles enterprises face while adopting public chains for payments and transactions. Enterprises need the ability to conduct certain transactions confidentially without having to reveal the transaction details. Currently, account-based public chains are used to support arbitrary smart contracts, allowing complex business rules to be executed on the public chain. 
+
+Implementing privacy on account-based blockchains without leaking data and securing against double spend is a challenge with existing technology. Innovations in ZAGG Protocol bring privacy to public blockchain through a hybrid model of tracking assets and values on the blockchain with both Accounts and UTXOs. This solution adapts the privacy and robustness of the UTXO model’s construct to build a flexible and programmable account-based blockchain. The protocol also introduces the concept of Integrated subchains that will allow for nodes to privately transact one-to-one or in a coalition group within public chain without side chains/off-chains while allowing for mathematically provable assertions about effects of the private transactions without leaking information about the private transactions or coalitions.
+
 ZAGG Protocol’s implementation of enterprise-grade privacy on public blockchain is designed to drive blockchain to mainstream enterprise-oriented payments and settlement use cases.
 ZAGG Protocol is building a novel privacy-preserving Blockchain. Innovations in ZAGG Protocol bring privacy to public blockchain through a hybrid model of tracking assets and values on the blockchain with both Accounts and UTXOs.This solution adapts the privacy and robustness of the UTXO model’s construct to build a flexible and programmable account-based blockchain.
 
 ZAGG Protocol is based on [stellar](https://github.com/stellar) and [Bitcoin](https://github.com/bitcoin/bitcoin) code, it intends to add enterprise-grade privacy through Zero Knowledge Proofs (ZKPs).
 
-Stellar-core is a replicated state machine that maintains a local copy of a cryptographic ledger and processes transactions against it, in consensus with a set of peers.
-It implements the [Stellar Consensus Protocol](https://github.com/stellar/stellar-core/blob/master/src/scp/readme.md), a _federated_ consensus protocol.
-It is written in C++14 and runs on Linux, OSX and Windows.
-Learn more by reading the [overview document](https://github.com/stellar/stellar-core/blob/master/docs/readme.md).
-
-Technical details of ZAGG Protocol are available in the [protocol document](https://www.zaggprotocol.com).
-
-Learn more by reading the [docs](https://github.com/zagg-protocol/docs).
-
 
 # Documentation
-Learn more by reading the [docs](https://github.com/zagg-protocol/docs).
 
 Docs
 ==================
+Learn more by reading the [docs](https://github.com/zagg-protocol/docs).
 
-This repository hosts all ZAGG Protocol docs and the relevant docs of other projects. The repository is being continuosly updated to give full information on the ZAGG Protocol specifications.
-
-## ZAGG Protocol
-
-Privacy is one of the biggest hurdles enterprises face while adopting public chains for payments and transactions. Enterprises need the ability to conduct certain transactions confidentially without having to reveal the transaction details. Currently, account-based public chains are used to support arbitrary smart contracts, allowing complex business rules to be executed on the public chain. 
-
-Implementing privacy on account-based blockchains without leaking data and securing against double spend is a challenge with existing technology. Innovations in ZAGG Protocol bring privacy to public blockchain through a hybrid model of tracking assets and values on the blockchain with both Accounts and UTXOs. This solution adapts the privacy and robustness of the UTXO model’s construct to build a flexible and programmable account-based blockchain. The protocol also introduces the concept of Integrated subchains that will allow for nodes to privately transact one-to-one or in a coalition group within public chain without side chains/off-chains while allowing for mathematically provable assertions about effects of the private transactions without leaking information about the private transactions or coalitions.
+Docs repository hosts all ZAGG Protocol docs and the relevant docs of other projects. The repository is being continuosly updated to give full information on the ZAGG Protocol specifications.
 
 Please refer to [concepts](https://github.com/zagg-protocol/docs/tree/master/Concepts) for full understanding of ZAGG Protocol on problem statement, technology solution and business case.
 
