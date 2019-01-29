@@ -97,10 +97,8 @@ CommandHandler::CommandHandler(Application& app) : mApp(app)
 }
 
 
-void 
-
-CommandHandler::utxoHandler(std::string const& name, HandlerRoute route)
-{
+void
+CommandHandler::utxoHandler(std::string const& params, std::string& retStr){
     printf("call bitcoin raw transaction hex functions from here ");    
 }
 
