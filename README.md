@@ -341,11 +341,108 @@ Input UTXO should be equal to Output UTXOs. The existing test cases in the UTXO 
 
 ## Implementation
 The implementation needed the following changes:
-##### Build Changes
 #### Route addition
+The route is added to `commandhandler.cpp`
+```
+void
+CommandHandler::utxoHandler(std::string const& params, std::string& retStr)
+{
+   std::ostringstream output;
+   const std::string prefix("?hex=");
+   if (params.compare(0, prefix.size(), prefix) == 0)
+   {
+       std::string txHex = params.substr(prefix.size());
+       // calling bitcoin to validate the HEX
+       // parse the HEX into transaction object
+       // send to mempool after validation
+       output << sendrawtransactionzagg(txHex);
+   }
+   else
+   {
+       throw std::invalid_argument("Must specify a tx hex: tx?hex=<tx in "
+                               "hex format>\"}");
+   }
+   // returns the transaction hash
+   retStr = output.str();
+}
+```
 #### Addition of new transaction function
+We added `sendrawtransactionzagg` in `src/rpc/rawtransaction.cpp` file to process transaction 
+HEX coming from the `utxo` route. The HEX is decoded into transaction object and the presence of transaction hash is checked 
+in the `mempool`. If it is not already present, then the transactoin is sent to 
+`mempool` and gets broadcasted to the peers.  The following is the function declaration of `sendrawtransactionzagg`
+
+```
+static std::string sendrawtransactionzagg(const std::string& hex_tx)
+{
+   std::promise<void> promise;
+
+   // parse hex string from parameter in
+   CMutableTransaction mtx;
+   if (!DecodeHexTx(mtx, hex_tx))
+       throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "TX decode failed");
+
+   CTransactionRef tx(MakeTransactionRef(std::move(mtx)));
+   const uint256& hashTx = tx->GetHash();
+
+   CAmount nMaxRawTxFee = maxTxFee;
+   // cs_main scope
+   LOCK(cs_main);
+   CCoinsViewCache &view = *pcoinsTip;
+   bool fHaveChain = false;
+   for (size_t o = 0; !fHaveChain && o < tx->vout.size(); o++) {
+       const Coin& existingCoin = view.AccessCoin(COutPoint(hashTx, o));
+       fHaveChain = !existingCoin.IsSpent();
+   }
+   bool fHaveMempool = mempool.exists(hashTx);
+   if (!fHaveMempool && !fHaveChain) {
+       // push to local node and sync with wallets
+       CValidationState state;
+       bool fMissingInputs;
+       if (!AcceptToMemoryPool(mempool, state, std::move(tx), &fMissingInputs,
+                               nullptr /* plTxnReplaced */, false /* bypass_limits */, nMaxRawTxFee)) {
+           if (state.IsInvalid()) {
+               throw JSONRPCError(RPC_TRANSACTION_REJECTED, FormatStateMessage(state));
+           } else {
+               if (fMissingInputs) {
+                   throw JSONRPCError(RPC_TRANSACTION_ERROR, "Missing inputs");
+               }
+               throw JSONRPCError(RPC_TRANSACTION_ERROR, FormatStateMessage(state));
+           }
+       } else {
+           // If wallet is enabled, ensure that the wallet has been made aware
+           // of the new transaction prior to returning. This prevents a race
+           // where a user might call sendrawtransaction with a transaction
+           // to/from their wallet, immediately call some wallet RPC, and get
+           // a stale result because callbacks have not yet been processed.
+           CallFunctionInValidationInterfaceQueue([&promise] {
+               promise.set_value();
+           });
+       }
+   } else if (fHaveChain) {
+       throw JSONRPCError(RPC_TRANSACTION_ALREADY_IN_CHAIN, "transaction already in block chain");
+   } else {
+       // Make sure we don't block forever if re-sending
+       // a transaction already in mempool.
+       promise.set_value();
+   }
+   // cs_main
+   promise.get_future().wait();
+
+   if(!g_connman)
+       throw JSONRPCError(RPC_CLIENT_P2P_DISABLED, "Error: Peer-to-peer functionality missing or disabled");
+
+   CInv inv(MSG_TX, hashTx);
+   g_connman->ForEachNode([&inv](CNode* pnode)
+   {
+       pnode->PushInventory(inv);
+   });
+
+   return hashTx.GetHex();
+}
+```
 #### Exposing bitcoin functionality to stellar
-#### Integrating all these changes in stellar code
+#### Build Changes
 
 
 
