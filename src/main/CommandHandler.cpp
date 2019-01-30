@@ -32,7 +32,7 @@
 #include "test/TestAccount.h"
 #include "test/TxTests.h"
 #include <regex>
-#include <rawtransaction.h>
+#include <rpc/rawtransaction.h>
 
 using namespace stellar::txtest;
 
