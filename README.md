@@ -36,7 +36,7 @@ ZAGG Protocol is starting the development from the stable build of Stellar. In t
 
 A more detailed development plan is as follows:
 
-### Protocol V0.0.1 | 
+### Protocol V0.1
 > Integration of bitcoin code base into the stellar fork to achieve dual accounts balance and UTXO balances.
 
 **Assumptions:**
@@ -47,36 +47,402 @@ A more detailed development plan is as follows:
 After this step, User will be able to create a transaction via CLI. Use the data as input to the UTXO route. The communication is not in XDR and it's in either plain text or hex format. Stellar code invokes a call to Bitcoin code base and registers the transaction.  This step is the first step to create one merged running instance of both the protocols as foundation for next steps.
 
 
-### Protocol V0.0.2 | 
-> Both Account balance transactions and UTXO based transaction will go through Stellar consensus protocol (SCP) and transaction set is applied on the ledger after the consensus. This will add a new transaction to Stellar and the system will support both accounts state changes and UTXOs on the global ledger(s). There will be only one (Stellar) Consensus mechanism on the network.
+### Protocol V0.2
+> Both Account balance transactions and UTXO based transaction will go through Stellar consensus protocol (SCP) 
+
+In this step the transaction set is applied on the ledger after the consensus. This will add a new transaction to Stellar and the system will support both accounts state changes and UTXOs on the global ledger(s). There will be only one (Stellar) Consensus mechanism on the network.
  
 **Assumptions:**
 * Dual Ledgers with Dual accounts
 * Single consensus
 * Multiple Nodes
 
-### Protocol V0.0.3 | 
+### Protocol V0.3
 > Add Account To UTXO and UTXO to Account conversions
+
 This step will allow the user to move assets (multiple types) from her account into UTXOs (multiple types) and back and execute transfer of those assets/UTXOs to other users on the network over SCP. This step will also ensure no double spending and assets/resource consistency across both the types for any given user and on the network.
 
-### Protocol V0.0.4
+### Protocol V0.4
 > Replace Bitcoin with ZCash
+
 The above three steps of changes will then be applied to ZCash Sapling code base and it will be merged with Stellar code base. Subsequent code changes will be on the Zero Knowledge Proofs, Commitments and Nullifiers functionality so that the system will be able to support shielded ZKP transactions on Stellar consensus.
 
-### Protocol V0.0.5
+### Protocol V0.5
 > Integrating the ledgers
+
 The accounts and shielded UTXOs transactions will be merged so that all the transactions will be recorded and retrieved from one global ledger.
 
-### Protocol V0.0.6
+### Protocol V0.6
 > Adding Private networks
+
 Zagg supports creation of private subnetworks for forming coalitions where the transactions are visible to all the parties but not to the public. All the transactions are verified by the public nodes but cannot be seen by the public nodes.
 
-### Protocol V0.0.7
+### Protocol V0.7
 > Adding Smart contracts
+
 Zagg will increase the capability of smart contracts to enable different business models to operate on the network.
 
 
+# Current Status V 0.0.1
 
+
+## Simple Summary
+ `CommandHandler::utxoHandler`  route in stellar which calls `sendrawtransactionzagg` function in bitcoin static library to enable UTXO transactions in zagg-core on a single node. 
+
+## Abstract
+A UTXO transaction from sender UTXOs to receiver UTXOs has to be transmitted in hex format to the `CommandHandler::utxoHandler` route in Stellar. The UTXOs that are being spent have to be chosen and the transaction has to be signed before it is sent to the route in stellar
+
+## Motivation
+Zagg protocol enables storage of value and assets in both account and UTXO primitives to benefit from the advantages of both the primitives. Having UTXOs as primitives allows us to establish privacy on top of Stellar Consensus Protocol.
+
+
+## Specification
+A signed UTXO transaction in the hex format sent to a stellar route should be commited to the UTXO part of the blockchain.
+
+The data structures needed to enable UTXO transaction are the following: 
+* CTransaction: Data sturcture of transaction
+* CTxIn: Input UTXO data structure
+* CTxOut: Output UTXO data structure
+```
+class CTransaction
+{
+public:
+    // Default transaction version.
+    static const int32_t CURRENT_VERSION=2;
+
+    // Changing the default transaction version requires a two step process: first
+    // adapting relay policy by bumping MAX_STANDARD_VERSION, and then later date
+    // bumping the default CURRENT_VERSION at which point both CURRENT_VERSION and
+    // MAX_STANDARD_VERSION will be equal.
+    static const int32_t MAX_STANDARD_VERSION=2;
+
+    // The local variables are made const to prevent unintended modification
+    // without updating the cached hash value. However, CTransaction is not
+    // actually immutable; deserialization and assignment are implemented,
+    // and bypass the constness. This is safe, as they update the entire
+    // structure, including the hash.
+    const std::vector<CTxIn> vin;
+    const std::vector<CTxOut> vout;
+    const int32_t nVersion;
+    const uint32_t nLockTime;
+
+private:
+    /** Memory only. */
+    const uint256 hash;
+    const uint256 m_witness_hash;
+
+    uint256 ComputeHash() const;
+    uint256 ComputeWitnessHash() const;
+
+public:
+    /** Construct a CTransaction that qualifies as IsNull() */
+    CTransaction();
+
+    /** Convert a CMutableTransaction into a CTransaction. */
+    CTransaction(const CMutableTransaction &tx);
+    CTransaction(CMutableTransaction &&tx);
+
+    template <typename Stream>
+    inline void Serialize(Stream& s) const {
+        SerializeTransaction(*this, s);
+    }
+
+    /** This deserializing constructor is provided instead of an Unserialize method.
+     *  Unserialize is not possible, since it would require overwriting const fields. */
+    template <typename Stream>
+    CTransaction(deserialize_type, Stream& s) : CTransaction(CMutableTransaction(deserialize, s)) {}
+
+    bool IsNull() const {
+        return vin.empty() && vout.empty();
+    }
+
+    const uint256& GetHash() const { return hash; }
+    const uint256& GetWitnessHash() const { return m_witness_hash; };
+
+    // Return sum of txouts.
+    CAmount GetValueOut() const;
+    // GetValueIn() is a method on CCoinsViewCache, because
+    // inputs must be known to compute value in.
+
+    /**
+     * Get the total transaction size in bytes, including witness data.
+     * "Total Size" defined in BIP141 and BIP144.
+     * @return Total transaction size in bytes
+     */
+    unsigned int GetTotalSize() const;
+
+    bool IsCoinBase() const
+    {
+        return (vin.size() == 1 && vin[0].prevout.IsNull());
+    }
+
+    friend bool operator==(const CTransaction& a, const CTransaction& b)
+    {
+        return a.hash == b.hash;
+    }
+
+    friend bool operator!=(const CTransaction& a, const CTransaction& b)
+    {
+        return a.hash != b.hash;
+    }
+
+    std::string ToString() const;
+
+    bool HasWitness() const
+    {
+        for (size_t i = 0; i < vin.size(); i++) {
+            if (!vin[i].scriptWitness.IsNull()) {
+                return true;
+            }
+        }
+        return false;
+    }
+};
+
+```
+```
+/** An input of a transaction.  It contains the location of the previous
+ * transaction's output that it claims and a signature that matches the
+ * output's public key.
+ */
+class CTxIn
+{
+public:
+    COutPoint prevout;
+    CScript scriptSig;
+    uint32_t nSequence;
+    CScriptWitness scriptWitness; //!< Only serialized through CTransaction
+
+    /* Setting nSequence to this value for every input in a transaction
+     * disables nLockTime. */
+    static const uint32_t SEQUENCE_FINAL = 0xffffffff;
+
+    /* Below flags apply in the context of BIP 68*/
+    /* If this flag set, CTxIn::nSequence is NOT interpreted as a
+     * relative lock-time. */
+    static const uint32_t SEQUENCE_LOCKTIME_DISABLE_FLAG = (1U << 31);
+
+    /* If CTxIn::nSequence encodes a relative lock-time and this flag
+     * is set, the relative lock-time has units of 512 seconds,
+     * otherwise it specifies blocks with a granularity of 1. */
+    static const uint32_t SEQUENCE_LOCKTIME_TYPE_FLAG = (1 << 22);
+
+    /* If CTxIn::nSequence encodes a relative lock-time, this mask is
+     * applied to extract that lock-time from the sequence field. */
+    static const uint32_t SEQUENCE_LOCKTIME_MASK = 0x0000ffff;
+
+    /* In order to use the same number of bits to encode roughly the
+     * same wall-clock duration, and because blocks are naturally
+     * limited to occur every 600s on average, the minimum granularity
+     * for time-based relative lock-time is fixed at 512 seconds.
+     * Converting from CTxIn::nSequence to seconds is performed by
+     * multiplying by 512 = 2^9, or equivalently shifting up by
+     * 9 bits. */
+    static const int SEQUENCE_LOCKTIME_GRANULARITY = 9;
+
+    CTxIn()
+    {
+        nSequence = SEQUENCE_FINAL;
+    }
+
+    explicit CTxIn(COutPoint prevoutIn, CScript scriptSigIn=CScript(), uint32_t nSequenceIn=SEQUENCE_FINAL);
+    CTxIn(uint256 hashPrevTx, uint32_t nOut, CScript scriptSigIn=CScript(), uint32_t nSequenceIn=SEQUENCE_FINAL);
+
+    ADD_SERIALIZE_METHODS;
+
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream& s, Operation ser_action) {
+        READWRITE(prevout);
+        READWRITE(scriptSig);
+        READWRITE(nSequence);
+    }
+
+    friend bool operator==(const CTxIn& a, const CTxIn& b)
+    {
+        return (a.prevout   == b.prevout &&
+                a.scriptSig == b.scriptSig &&
+                a.nSequence == b.nSequence);
+    }
+
+    friend bool operator!=(const CTxIn& a, const CTxIn& b)
+    {
+        return !(a == b);
+    }
+
+    std::string ToString() const;
+};
+
+```
+
+```
+/** An output of a transaction.  It contains the public key that the next input
+ * must be able to sign with to claim it.
+ */
+class CTxOut
+{
+public:
+    CAmount nValue;
+    CScript scriptPubKey;
+
+    CTxOut()
+    {
+        SetNull();
+    }
+
+    CTxOut(const CAmount& nValueIn, CScript scriptPubKeyIn);
+
+    ADD_SERIALIZE_METHODS;
+
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream& s, Operation ser_action) {
+        READWRITE(nValue);
+        READWRITE(scriptPubKey);
+    }
+
+    void SetNull()
+    {
+        nValue = -1;
+        scriptPubKey.clear();
+    }
+
+    bool IsNull() const
+    {
+        return (nValue == -1);
+    }
+
+    friend bool operator==(const CTxOut& a, const CTxOut& b)
+    {
+        return (a.nValue       == b.nValue &&
+                a.scriptPubKey == b.scriptPubKey);
+    }
+
+    friend bool operator!=(const CTxOut& a, const CTxOut& b)
+    {
+        return !(a == b);
+    }
+
+    std::string ToString() const;
+};
+```
+
+
+## Rationale
+Creating  accounts and UTXOs primitives in zagg for value transfer is essential to build privacy, private network and smart contract features in the future. This is the basis for the upcoming features.
+
+
+
+## Backwards Compatibility
+This is fully backwards compatible
+
+## Test Cases
+Some test cases that must be considered include:
+
+Input UTXO should be equal to Output UTXOs. The existing test cases in the UTXO code already handle this.
+
+## Implementation
+The implementation needed the following changes:
+#### Route addition
+The route is added to `commandhandler.cpp`
+```
+void
+CommandHandler::utxoHandler(std::string const& params, std::string& retStr)
+{
+   std::ostringstream output;
+   const std::string prefix("?hex=");
+   if (params.compare(0, prefix.size(), prefix) == 0)
+   {
+       std::string txHex = params.substr(prefix.size());
+       // calling bitcoin to validate the HEX
+       // parse the HEX into transaction object
+       // send to mempool after validation
+       output << sendrawtransactionzagg(txHex);
+   }
+   else
+   {
+       throw std::invalid_argument("Must specify a tx hex: tx?hex=<tx in "
+                               "hex format>\"}");
+   }
+   // returns the transaction hash
+   retStr = output.str();
+}
+```
+#### Addition of new transaction function
+We added `sendrawtransactionzagg` in `src/rpc/rawtransaction.cpp` file to process transaction 
+HEX coming from the `utxo` route. The HEX is decoded into transaction object and the presence of transaction hash is checked 
+in the `mempool`. If it is not already present, then the transactoin is sent to 
+`mempool` and gets broadcasted to the peers.  The following is the function declaration of `sendrawtransactionzagg`
+
+```
+static std::string sendrawtransactionzagg(const std::string& hex_tx)
+{
+   std::promise<void> promise;
+
+   // parse hex string from parameter in
+   CMutableTransaction mtx;
+   if (!DecodeHexTx(mtx, hex_tx))
+       throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "TX decode failed");
+
+   CTransactionRef tx(MakeTransactionRef(std::move(mtx)));
+   const uint256& hashTx = tx->GetHash();
+
+   CAmount nMaxRawTxFee = maxTxFee;
+   // cs_main scope
+   LOCK(cs_main);
+   CCoinsViewCache &view = *pcoinsTip;
+   bool fHaveChain = false;
+   for (size_t o = 0; !fHaveChain && o < tx->vout.size(); o++) {
+       const Coin& existingCoin = view.AccessCoin(COutPoint(hashTx, o));
+       fHaveChain = !existingCoin.IsSpent();
+   }
+   bool fHaveMempool = mempool.exists(hashTx);
+   if (!fHaveMempool && !fHaveChain) {
+       // push to local node and sync with wallets
+       CValidationState state;
+       bool fMissingInputs;
+       if (!AcceptToMemoryPool(mempool, state, std::move(tx), &fMissingInputs,
+                               nullptr /* plTxnReplaced */, false /* bypass_limits */, nMaxRawTxFee)) {
+           if (state.IsInvalid()) {
+               throw JSONRPCError(RPC_TRANSACTION_REJECTED, FormatStateMessage(state));
+           } else {
+               if (fMissingInputs) {
+                   throw JSONRPCError(RPC_TRANSACTION_ERROR, "Missing inputs");
+               }
+               throw JSONRPCError(RPC_TRANSACTION_ERROR, FormatStateMessage(state));
+           }
+       } else {
+           // If wallet is enabled, ensure that the wallet has been made aware
+           // of the new transaction prior to returning. This prevents a race
+           // where a user might call sendrawtransaction with a transaction
+           // to/from their wallet, immediately call some wallet RPC, and get
+           // a stale result because callbacks have not yet been processed.
+           CallFunctionInValidationInterfaceQueue([&promise] {
+               promise.set_value();
+           });
+       }
+   } else if (fHaveChain) {
+       throw JSONRPCError(RPC_TRANSACTION_ALREADY_IN_CHAIN, "transaction already in block chain");
+   } else {
+       // Make sure we don't block forever if re-sending
+       // a transaction already in mempool.
+       promise.set_value();
+   }
+   // cs_main
+   promise.get_future().wait();
+
+   if(!g_connman)
+       throw JSONRPCError(RPC_CLIENT_P2P_DISABLED, "Error: Peer-to-peer functionality missing or disabled");
+
+   CInv inv(MSG_TX, hashTx);
+   g_connman->ForEachNode([&inv](CNode* pnode)
+   {
+       pnode->PushInventory(inv);
+   });
+
+   return hashTx.GetHex();
+}
+```
+#### Exposing bitcoin functionality to stellar
+#### Build Changes
 
 
 
@@ -87,7 +453,7 @@ The installations instructions and running instructions are not yet updated. The
 
 See [Installation](./INSTALL.md)
 
-# Running tests
+# Stellar Running tests
 
 run tests with:
   `src/stellar-core --test`
