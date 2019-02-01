@@ -43,6 +43,15 @@ outOfMemory()
 }
 }
 
+static void WaitForShutdown()
+{
+    while (!ShutdownRequested())
+    {
+        MilliSleep(200);
+    }
+    Interrupt();
+}
+
 static bool AppInit(int argc, char* argv[])
 {
     InitInterfaces interfaces;
@@ -184,7 +193,7 @@ main(int argc, char* const* argv)
 
     xdr::marshaling_stack_limit = 1000;
 
-    printf("Step 1");
+    std::cout << "step1";
     
     SetupEnvironment();
 
@@ -192,9 +201,15 @@ main(int argc, char* const* argv)
     noui_connect();
 
 
-    std::cout<<"initialization  of appInit - bitcoin" <<test << ;
+    std::cout<< "initialization  of appInit - bitcoin";
 
-    bool test = AppInit(argc, argv);
+    // converting  char* const* to char* array
+    char* argvArray[argc];
+    for(int i=0; i<argc; i++){
+        argvArray[i] = argv[i];
+    }
+
+    bool test = AppInit(argc, argvArray);
 
     auto result = handleCommandLine(argc, argv);
     if (result)

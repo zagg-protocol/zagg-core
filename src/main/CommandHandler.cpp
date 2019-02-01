@@ -33,6 +33,7 @@
 #include "test/TxTests.h"
 #include <regex>
 #include <rpc/rawtransaction.h>
+#include "version.h"
 
 using namespace stellar::txtest;
 
@@ -107,6 +108,10 @@ CommandHandler::utxoHandler(std::string const& params, std::string& retStr)
     {
         std::string txHex = params.substr(prefix.size());
         output << sendrawtransactionzagg(txHex);
+        if (CADDR_TIME_VERSION >= 100)
+        {
+            std::cout << "success";
+        }
     }
     else
     {
