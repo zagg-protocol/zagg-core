@@ -9,7 +9,9 @@ AM_CPPFLAGS += -isystem "$(top_srcdir)/lib"			\
 	-isystem "$(top_srcdir)/lib/cereal/include"		\
 	-isystem "$(top_srcdir)/lib/util"			\
 	-isystem "$(top_srcdir)/lib/soci/src/core"	\
-	-isystem "$(top_srcdir)/lib/bitcoin/src/univalue/include"
+	-isystem "$(top_srcdir)/lib/bitcoin/src/univalue/include" \
+	-isystem "$(top_srcdir)/lib/bitcoin/src"
+	
 
 if USE_POSTGRES
 AM_CPPFLAGS += -DUSE_POSTGRES=1 $(libpq_CFLAGS)

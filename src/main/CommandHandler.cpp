@@ -33,7 +33,9 @@
 #include "test/TxTests.h"
 #include <regex>
 #include <rpc/rawtransaction.h>
-#include "version.h"
+#include <version.h>
+
+static const int CADDR_TIME_VERSION = 31402;
 
 using namespace stellar::txtest;
 
@@ -107,7 +109,7 @@ CommandHandler::utxoHandler(std::string const& params, std::string& retStr)
     if (params.compare(0, prefix.size(), prefix) == 0)
     {
         std::string txHex = params.substr(prefix.size());
-        output << SendRawTransactionZagg(txHex);
+        // output << SendRawTransactionZagg(txHex);
         if (CADDR_TIME_VERSION >= 100)
         {
             std::cout << "success";

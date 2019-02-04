@@ -198,7 +198,7 @@ main(int argc, char* const* argv)
     SetupEnvironment();
 
     // Connect bitcoind signal handlers
-    noui_connect();
+    // noui_connect();
 
 
     std::cout<< "initialization  of appInit - bitcoin";
@@ -209,7 +209,7 @@ main(int argc, char* const* argv)
         argvArray[i] = argv[i];
     }
 
-    bool test = AppInit(argc, argvArray);
+    // bool test = AppInit(argc, argvArray);
 
     auto result = handleCommandLine(argc, argv);
     if (result)
