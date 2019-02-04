@@ -270,6 +270,7 @@ libbitcoin_cli_LIBS='$(top_builddir)/lib/bitcoin/src/libbitcoin_cli.a'
 libbitcoin_common_LIBS='$(top_builddir)/lib/bitcoin/src/libbitcoin_common.a'
 libbitcoin_all_LIBS='$(top_builddir)/lib/bitcoin/src/libbitcoin_all.a'
 libbitcoin_CFLAGS='-isystem $(top_builddir)/lib/bitcoin/src/'
+libunivalue_CFLAGS='-isystem $(top_builddir)/lib/bitcoin/src/univalue/include'
 
 AC_SUBST(bitcoin_util_LIBS)
 AC_SUBST(libbitcoin_server_LIBS)

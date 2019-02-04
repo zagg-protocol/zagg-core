@@ -355,7 +355,7 @@ CommandHandler::utxoHandler(std::string const& params, std::string& retStr)
        // calling bitcoin to validate the HEX
        // parse the HEX into transaction object
        // send to mempool after validation
-       output << sendrawtransactionzagg(txHex);
+       output << SendRawTransactionZagg(txHex);
    }
    else
    {
@@ -370,10 +370,10 @@ CommandHandler::utxoHandler(std::string const& params, std::string& retStr)
 We added `sendrawtransactionzagg` in `src/rpc/rawtransaction.cpp` file to process transaction 
 HEX coming from the `utxo` route. The HEX is decoded into transaction object and the presence of transaction hash is checked 
 in the `mempool`. If it is not already present, then the transactoin is sent to 
-`mempool` and gets broadcasted to the peers.  The following is the function declaration of `sendrawtransactionzagg`
+`mempool` and gets broadcasted to the peers.  The following is the function declaration of `SendRawTransactionZagg`
 
 ```
-static std::string sendrawtransactionzagg(const std::string& hex_tx)
+static std::string SendRawTransactionZagg(const std::string& hex_tx)
 {
    std::promise<void> promise;
 
