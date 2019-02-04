@@ -11,8 +11,19 @@ AC_INIT([stellar-core],[0.1],[],[],[http://www.stellar.org])
 AM_INIT_AUTOMAKE([-Wall -Wextra -Wconversion subdir-objects tar-ustar silent-rules])
 AC_CONFIG_SRCDIR([configure.ac])
 AC_CONFIG_MACRO_DIR([m4])
+AC_CONFIG_MACRO_DIR([lib/bitcoin/build-aux/m4])
 
 AC_ARG_VAR([LIBCXX_PATH], [path to libc++ and libc++abi])
+
+define(MINIMUM_REQUIRED_BOOST, 1.47.0)
+
+AX_BOOST_BASE([MINIMUM_REQUIRED_BOOST])
+AX_BOOST_SYSTEM
+AX_BOOST_FILESYSTEM
+AX_BOOST_THREAD
+AX_BOOST_CHRONO
+
+BOOST_LIBS="$BOOST_LDFLAGS $BOOST_SYSTEM_LIB $BOOST_FILESYSTEM_LIB $BOOST_THREAD_LIB $BOOST_CHRONO_LIB"
 
 if test -z "${WFLAGS+set}"; then
    WFLAGS=-Wall
