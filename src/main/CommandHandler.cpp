@@ -33,7 +33,6 @@
 #include "test/TxTests.h"
 #include <regex>
 #include <rpc/rawtransaction.h>
-#include <version.h>
 
 static const int CADDR_TIME_VERSION = 31402;
 
