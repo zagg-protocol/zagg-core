@@ -16,10 +16,12 @@ stellar_core_LDADD = $(soci_LIBS) $(libmedida_LIBS)		\
 	$(BOOST_LIBS) \
 	$(top_builddir)/lib/lib3rdparty.a $(sqlite3_LIBS)	\
 	$(libpq_LIBS) $(xdrpp_LIBS) $(libsodium_LIBS) \
-	$(libbitcoin_server_LIBS) \
-	$(libbitcoin_consensus_LIBS) \
-	$(libbitcoin_cli_LIBS) \
-	$(libbitcoin_common_LIBS)
+	$(libbitcoin_all)
+
+# $(libbitcoin_server_LIBS) \
+# $(libbitcoin_consensus_LIBS) \
+# $(libbitcoin_cli_LIBS) \
+# $(libbitcoin_common_LIBS)
 
 TESTDATA_DIR = testdata
 TEST_FILES = $(TESTDATA_DIR)/stellar-core_example.cfg $(TESTDATA_DIR)/stellar-core_standalone.cfg $(TESTDATA_DIR)/stellar-core_testnet.cfg \

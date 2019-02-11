@@ -445,6 +445,9 @@ libbitcoin_server_LIBS='$(top_builddir)/lib/bitcoin/src/libbitcoin_server.a'
 libbitcoin_consensus_LIBS='$(top_builddir)/lib/bitcoin/src/libbitcoin_consensus.a'
 libbitcoin_cli_LIBS='$(top_builddir)/lib/bitcoin/src/libbitcoin_cli.a'
 libbitcoin_common_LIBS='$(top_builddir)/lib/bitcoin/src/libbitcoin_common.a'
+libbitcoin_crypto_base_LIBS='$(top_builddir)/lib/bitcoin/src/crypto/libbitcoin_crypto_base.a'
+libsecp256k1_LIBS='$(top_builddir)/lib/bitcoin/src/secp256k1/libsecp256k1.la'
+libbitcoin_all='$(top_builddir)/lib/bitcoin/src/libbitcoin_all.a'
 libunivalue_CFLAGS='-isystem $(top_builddir)/lib/bitcoin/src/univalue/include'
  
 AC_SUBST(libbitcoin_util_LIBS)
@@ -452,6 +455,9 @@ AC_SUBST(libbitcoin_server_LIBS)
 AC_SUBST(libbitcoin_consensus_LIBS)
 AC_SUBST(libbitcoin_cli_LIBS)
 AC_SUBST(libbitcoin_common_LIBS)
+AC_SUBST(libsecp256k1_LIBS)
+AC_SUBST(libbitcoin_crypto_base_LIBS)
+AC_SUBST(libbitcoin_all)
 AC_SUBST(soci_CFLAGS)
 AC_SUBST(soci_LIBS)
 
