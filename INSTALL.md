@@ -1,4 +1,18 @@
-#Bitcoin Build Instructions
+# Zagg Core Installation instructions
+## Basic Installation
+
+- `git clone https://gitlab.com/zaggprotocol-implementataion/ZaggProtocolCore.git`
+- `cd zagg-core`
+- `git submodule init`
+- `git submodule update`
+- Type `./autogen.sh`.
+- Type `./configure`   *(If configure complains about compiler versions, try `CXX=clang-5.0 ./configure` or `CXX=g++-6 ./configure` or similar, depending on your compiler.)*
+- Type `make` or `make -j` (for aggressive parallel build)
+- Type `make check` to run tests.
+- Type `make install` to install.
+
+
+## Bitcoin Build Instructions
 
 cd lib/bitcoin
 
@@ -14,6 +28,8 @@ NOTE: change heap size based on your PC memory
 
 
 make -j 8
+
+
 
 Installation Instructions
 ==================
@@ -112,17 +128,6 @@ You may need to link few of the packages manually to avoid errors.
 ### Windows
 See [INSTALL-Windows.md](INSTALL-Windows.md)
 
-## Basic Installation
-
-- `git clone https://gitlab.com/zaggprotocol-implementataion/ZaggProtocolCore.git`
-- `cd stellar-core`
-- `git submodule init`
-- `git submodule update`
-- Type `./autogen.sh`.
-- Type `./configure`   *(If configure complains about compiler versions, try `CXX=clang-5.0 ./configure` or `CXX=g++-6 ./configure` or similar, depending on your compiler.)*
-- Type `make` or `make -j` (for aggressive parallel build)
-- Type `make check` to run tests.
-- Type `make install` to install.
 
 ## Building with clang and libc++
 

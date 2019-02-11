@@ -373,7 +373,7 @@ in the `mempool`. If it is not already present, then the transactoin is sent to
 `mempool` and gets broadcasted to the peers.  The following is the function declaration of `SendRawTransactionZagg`
 
 ```
-static std::string SendRawTransactionZagg(const std::string& hex_tx)
+std::string SendRawTransactionZagg(const std::string& hex_tx)
 {
    std::promise<void> promise;
 
