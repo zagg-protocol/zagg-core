@@ -20,8 +20,8 @@ stellar_core_LDADD = $(soci_LIBS) $(libmedida_LIBS)		\
 	$(libpq_LIBS) $(xdrpp_LIBS) $(libsodium_LIBS) \
 	$(libbitcoin_server_LIBS) \
 	$(libbitcoin_consensus_LIBS) \
-	$(libbitcoin_cli_LIBS) \
 	$(libbitcoin_common_LIBS) \
+    $(libbitcoin_util_LIBS) \
 	$(libbitcoin_univalue_LIBS) \
 	$(libbitcoin_crypto_base_LIBS) \
 	$(libbitcoin_crypto_sse41_LIBS) \
@@ -37,8 +37,8 @@ stellar_core_LDADD = $(soci_LIBS) $(libmedida_LIBS)		\
 	-lboost_filesystem \
 	-lcrypto \
 	-levent_pthreads \
-	-levent
-
+	-levent 
+	
 
 
 TESTDATA_DIR = testdata
