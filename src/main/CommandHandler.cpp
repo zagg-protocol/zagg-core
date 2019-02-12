@@ -108,7 +108,7 @@ CommandHandler::utxoHandler(std::string const& params, std::string& retStr)
     if (params.compare(0, prefix.size(), prefix) == 0)
     {
         std::string txHex = params.substr(prefix.size());
-        // output << SendRawTransactionZagg(txHex);
+        output << SendRawTransactionZagg(txHex);
         if (CADDR_TIME_VERSION >= 100)
         {
             std::cout << "success";
