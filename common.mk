@@ -12,8 +12,9 @@ AM_CPPFLAGS += -isystem "$(top_srcdir)/lib"			\
 	-isystem "$(top_srcdir)/lib/cereal/include"		\
 	-isystem "$(top_srcdir)/lib/util"			\
 	-isystem "$(top_srcdir)/lib/soci/src/core"	\
-	-isystem "$(top_srcdir)/lib/bitcoin/src" \
-	-isystem "$(top_srcdir)/lib/bitcoin/src/univalue/include"
+	-isystem "$(top_srcdir)/lib/bitcoin/src" 
+
+# -isystem "$(top_srcdir)/lib/bitcoin/src/univalue/include"
 	
 #  \
 # -isystem "/usr/include/boost/"
