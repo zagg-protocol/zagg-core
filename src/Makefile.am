@@ -9,19 +9,37 @@ include $(srcdir)/src.mk
 noinst_HEADERS = $(SRC_H_FILES)
 
 # AM_LDFLAGS = $(BOOST_LDFLAGS)
-
 stellar_core_SOURCES = main/StellarCoreVersion.cpp $(SRC_CXX_FILES)
 stellar_core_CXXFLAGS = $(BOOST_CPPFLAGS)
+
+stellar_core_LDFLAGS = -pthread -fPIC -std=c++11
+# Linking rest of the libraries of bitcoin
 stellar_core_LDADD = $(soci_LIBS) $(libmedida_LIBS)		\
 	$(BOOST_LIBS) \
 	$(top_builddir)/lib/lib3rdparty.a $(sqlite3_LIBS)	\
 	$(libpq_LIBS) $(xdrpp_LIBS) $(libsodium_LIBS) \
-	$(libbitcoin_all)
+	$(libbitcoin_server_LIBS) \
+	$(libbitcoin_consensus_LIBS) \
+	$(libbitcoin_common_LIBS) \
+    $(libbitcoin_util_LIBS) \
+	$(libbitcoin_univalue_LIBS) \
+	$(libbitcoin_crypto_base_LIBS) \
+	$(libbitcoin_crypto_sse41_LIBS) \
+	$(libbitcoin_crypto_avx2_LIBS) \
+	$(libbitcoin_crypto_shani_LIBS) \
+	$(libbitcoin_leveldb_LIBS) \
+	$(libbitcoin_leveldb_sse42_LIBS) \
+	$(libbitcoin_memenv_LIBS) \
+	$(libbitcoin_secp256k1_LIBS) \
+	-lboost_system \
+	-lboost_thread \
+	-lboost_chrono \
+	-lboost_filesystem \
+	-lcrypto \
+	-levent_pthreads \
+	-levent 
+	
 
-# $(libbitcoin_server_LIBS) \
-# $(libbitcoin_consensus_LIBS) \
-# $(libbitcoin_cli_LIBS) \
-# $(libbitcoin_common_LIBS)
 
 TESTDATA_DIR = testdata
 TEST_FILES = $(TESTDATA_DIR)/stellar-core_example.cfg $(TESTDATA_DIR)/stellar-core_standalone.cfg $(TESTDATA_DIR)/stellar-core_testnet.cfg \

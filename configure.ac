@@ -440,24 +440,39 @@ soci_CFLAGS='-isystem $(top_srcdir)/lib/soci/src/core'
 soci_CFLAGS="$soci_CFLAGS "'-isystem $(top_srcdir)/lib/soci/src/backends/sqlite3'
 soci_LIBS='$(top_builddir)/lib/libsoci.a'
 
+# 
+# Adding all required libraries for bitcoin...
 libbitcoin_util_LIBS='$(top_builddir)/lib/bitcoin/src/libbitcoin_util.a'
 libbitcoin_server_LIBS='$(top_builddir)/lib/bitcoin/src/libbitcoin_server.a'
 libbitcoin_consensus_LIBS='$(top_builddir)/lib/bitcoin/src/libbitcoin_consensus.a'
 libbitcoin_cli_LIBS='$(top_builddir)/lib/bitcoin/src/libbitcoin_cli.a'
-libbitcoin_common_LIBS='$(top_builddir)/lib/bitcoin/src/libbitcoin_common.a'
+libbitcoin_common_LIBS='$(top_builddir)/lib/bitcoin/src/libbitcoin_common.a' 
+libbitcoin_univalue_LIBS='$(top_builddir)/lib/bitcoin/src/univalue/.libs/libunivalue.a'
 libbitcoin_crypto_base_LIBS='$(top_builddir)/lib/bitcoin/src/crypto/libbitcoin_crypto_base.a'
-libsecp256k1_LIBS='$(top_builddir)/lib/bitcoin/src/secp256k1/libsecp256k1.la'
-libbitcoin_all='$(top_builddir)/lib/bitcoin/src/libbitcoin_all.a'
-libunivalue_CFLAGS='-isystem $(top_builddir)/lib/bitcoin/src/univalue/include'
- 
+libbitcoin_crypto_sse41_LIBS='$(top_builddir)/lib/bitcoin/src/crypto/libbitcoin_crypto_sse41.a'
+libbitcoin_crypto_avx2_LIBS='$(top_builddir)/lib/bitcoin/src/crypto/libbitcoin_crypto_avx2.a'
+libbitcoin_crypto_shani_LIBS='$(top_builddir)/lib/bitcoin/src/crypto/libbitcoin_crypto_shani.a'
+libbitcoin_leveldb_LIBS='$(top_builddir)/lib/bitcoin/src/leveldb/libleveldb.a'
+libbitcoin_leveldb_sse42_LIBS='$(top_builddir)/lib/bitcoin/src/leveldb/libleveldb_sse42.a'
+libbitcoin_memenv_LIBS='$(top_builddir)/lib/bitcoin/src/leveldb/libmemenv.a'
+libbitcoin_secp256k1_LIBS='$(top_builddir)/lib/bitcoin/src/secp256k1/.libs/libsecp256k1.a'
+
 AC_SUBST(libbitcoin_util_LIBS)
 AC_SUBST(libbitcoin_server_LIBS)
 AC_SUBST(libbitcoin_consensus_LIBS)
 AC_SUBST(libbitcoin_cli_LIBS)
 AC_SUBST(libbitcoin_common_LIBS)
-AC_SUBST(libsecp256k1_LIBS)
+AC_SUBST(libbitcoin_univalue_LIBS)
 AC_SUBST(libbitcoin_crypto_base_LIBS)
-AC_SUBST(libbitcoin_all)
+AC_SUBST(libbitcoin_crypto_sse41_LIBS)
+AC_SUBST(libbitcoin_crypto_avx2_LIBS)
+AC_SUBST(libbitcoin_crypto_shani_LIBS)
+AC_SUBST(libbitcoin_leveldb_LIBS)
+AC_SUBST(libbitcoin_leveldb_sse42_LIBS)
+AC_SUBST(libbitcoin_memenv_LIBS)
+AC_SUBST(libbitcoin_secp256k1_LIBS)
+#
+
 AC_SUBST(soci_CFLAGS)
 AC_SUBST(soci_LIBS)
 

@@ -32,6 +32,8 @@
 
 INITIALIZE_EASYLOGGINGPP
 
+const std::function<std::string(const char*)> G_TRANSLATION_FUN = nullptr; 
+
 namespace stellar
 {
 static void
@@ -193,6 +195,7 @@ main(int argc, char* const* argv)
 
     xdr::marshaling_stack_limit = 1000;
 
+    //bitcoin impl  
     std::cout << "step1";
     
     SetupEnvironment();
