@@ -196,23 +196,22 @@ main(int argc, char* const* argv)
     xdr::marshaling_stack_limit = 1000;
 
     //bitcoin impl  
-    std::cout << "step1";
+    std::cout << "Bitcoin Initialization Starts.....................\n";
     
     SetupEnvironment();
 
     // Connect bitcoind signal handlers
     noui_connect();
 
-
-    std::cout<< "initialization  of appInit - bitcoin \n";
-
     // converting  char* const* to char* array
-    char* argvArray[argc];
-    for(int i=0; i<argc; i++){
-        argvArray[i] = argv[i];
-    }
+    // hardcoding args for bitcoin as of now
+    char* argvArray[] = {"bitcoind", "-datadir=/home/vishswasb/Documents/bitcoin-bc"};    
+    // for(int i=0; i<argc; i++){
+    //     argvArray[i] = argv[i];
+    // }
+    bool test = AppInit(2, argvArray);
 
-    bool test = AppInit(argc, argvArray);
+    std::cout << "Bitcoin Initialization Finishes.....................\n";
 
     auto result = handleCommandLine(argc, argv);
     if (result)
