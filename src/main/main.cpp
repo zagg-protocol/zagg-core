@@ -189,7 +189,7 @@ main(int argc, char* const* argv)
     xdr::marshaling_stack_limit = 1000;
 
     //bitcoin impl  
-    std::cout << "step1";
+    std::cout << "Bitcoin Initialization Starts.....................\n";
     
     SetupEnvironment();
 
