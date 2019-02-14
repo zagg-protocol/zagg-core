@@ -159,20 +159,13 @@ static bool AppInit(int argc, char* argv[])
             return false;
         }
         fRet = AppInitMain(interfaces);
+        std::cout<< fRet << "= 1 ==============================================================================================================\n";
     }
     catch (const std::exception& e) {
         PrintExceptionContinue(&e, "AppInit()");
     } catch (...) {
         PrintExceptionContinue(nullptr, "AppInit()");
     }
-
-    if (!fRet)
-    {
-        Interrupt();
-    } else {
-        WaitForShutdown();
-    }
-    Shutdown(interfaces);
 
     return fRet;
 }
@@ -206,14 +199,17 @@ main(int argc, char* const* argv)
 
     std::cout<< "initialization  of appInit - bitcoin \n";
 
-    // converting  char* const* to char* array
-    char* argvArray[argc];
-    for(int i=0; i<argc; i++){
-        argvArray[i] = argv[i];
-    }
+    char* argvArrayBC[] = {"bitcoind", "-regtest"};
+    bool test = AppInit(2, argvArrayBC);
 
-    bool test = AppInit(argc, argvArray);
-
+    std::cout<< "---------------------------------------NON BLOCKING -------------------------------------------------- \n";
+    std::cout<< "---------------------------------------NON BLOCKING -------------------------------------------------- \n";
+    std::cout<< "---------------------------------------NON BLOCKING -------------------------------------------------- \n";
+    std::cout<< "---------------------------------------NON BLOCKING -------------------------------------------------- \n";
+    std::cout<< "---------------------------------------NON BLOCKING -------------------------------------------------- \n";
+    std::cout<< "---------------------------------------NON BLOCKING -------------------------------------------------- \n";
+    std::cout<< "---------------------------------------NON BLOCKING -------------------------------------------------- \n";
+    
     auto result = handleCommandLine(argc, argv);
     if (result)
     {
@@ -221,4 +217,18 @@ main(int argc, char* const* argv)
     }
 
     return handleDeprecatedCommandLine(argc, argv);
+
+    //  std::cout<< fRet << "= 2 ==============================================================================================================\n";
+
+    // if (!fRet)
+    // {
+    //     std::cout<< fRet << "= 3 ==============================================================================================================\n";
+    //     Interrupt();
+    // } else {
+    //     std::cout<< fRet << "= 4 ==============================================================================================================\n";
+    //     WaitForShutdown();
+    //     std::cout<< fRet << "= 5 ==============================================================================================================\n";
+    // }
+    // Shutdown(interfaces);
+
 }
