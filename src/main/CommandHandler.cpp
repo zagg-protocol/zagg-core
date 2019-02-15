@@ -33,6 +33,7 @@
 #include "test/TxTests.h"
 #include <regex>
 #include <rpc/rawtransaction.h>
+#include <rpc/protocol.h>
 
 static const int CADDR_TIME_VERSION = 31402;
 
@@ -108,18 +109,33 @@ CommandHandler::utxoHandler(std::string const& params, std::string& retStr)
     if (params.compare(0, prefix.size(), prefix) == 0)
     {
         std::string txHex = params.substr(prefix.size());
-        output << SendRawTransactionZagg(txHex);
-        if (CADDR_TIME_VERSION >= 100)
-        {
-            std::cout << "success";
+        if(txHex == "")
+        {   
+            throw std::invalid_argument("Tx hex can not be null or empty");
+        }
+        else
+        {   
+            try
+            {
+                output << SendRawTransactionZagg(txHex);
+                if (CADDR_TIME_VERSION >= 100)
+                {
+                    std::cout << "success";
+                }
+            }
+            catch (const UniValue& objError)
+            {   
+                output << JSONRPCReply(UniValue::VNULL, objError, UniValue::VOBJ);
+                std::cout << output.str() << std::endl;
+            }   
         }
     }
     else
     {
-        throw std::invalid_argument("Must specify a tx hex: tx?hex=<tx in "
+        throw std::invalid_argument("Must specify a tx hex: utxo?hex=<tx in "
                                 "hex format>\"}");
     }
-    retStr = output.str();    
+    retStr = output.str();
 }
 
 
