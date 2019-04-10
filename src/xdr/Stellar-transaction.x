@@ -284,7 +284,7 @@ struct Operation
     case BUMP_SEQUENCE:
         BumpSequenceOp bumpSequenceOp;
     case MARK_ACCOUNT:
-        void;  
+        MarkAccountOp markAccountOp;  
     }
     body;
 };

@@ -35,28 +35,31 @@ MarkAccountOpFrame::isVersionSupported(uint32_t protocolVersion) const
     return protocolVersion >= 10;
 }
 
-
 bool 
-MarkAccountOpFrame::doApply(Application& app, LedgerDelta& delta,
-                             LedgerManager& ledgerManager)
+MarkAccountOpFrame::doApply(Application& app, AbstractLedgerTxn& ltx)
 {
-    AccountMarker accountMarker = mSourceAccount->getAccountMarker();
+    LedgerTxn ltxInner(ltx);
+    auto header = ltxInner.loadHeader();
+    auto sourceAccountEntry = loadSourceAccount(ltxInner, header);
+    auto& sourceAccount = sourceAccountEntry.current().data.account();
 
-    // if(accountMarker != 0)
+    // Apply the bump (bump succeeds silently if bumpTo <= current)
     {
-        mSourceAccount->setAccountMarker(mMarkAccountOp.accountMarker);
-        mSourceAccount->storeChange(delta, ledgerManager.getDatabase());
+        sourceAccount.accountMarker = mMarkAccountOp.accountMarker;
+        ltxInner.commit();
     }
 
+    // Return successful results
     innerResult().code(MARK_ACCOUNT_SUCCESS);
     app.getMetrics()
-        .NewMeter({"op-mark-account","success","apply"}, "operation")
-        .Mark();
+    .NewMeter({"op-mark-account","success","apply"}, "operation")
+    .Mark();
     return true;
+    
 }
 
 bool
-MarkAccountOpFrame::doCheckValid(Application& app)
+MarkAccountOpFrame::doCheckValid(Application& app, uint32_t ledgerVersion)
 {
     if (mMarkAccountOp.accountMarker == 0)
     {
