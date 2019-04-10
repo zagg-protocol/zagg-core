@@ -7,6 +7,8 @@
 #include "crypto/KeyUtils.h"
 #include "herder/Herder.h"
 #include "ledger/LedgerManager.h"
+#include "ledger/LedgerTxn.h"
+#include "ledger/LedgerTxnEntry.h"
 #include "lib/http/server.hpp"
 #include "lib/json/json.h"
 #include "lib/util/format.h"
@@ -15,6 +17,7 @@
 #include "main/Maintainer.h"
 #include "overlay/BanManager.h"
 #include "overlay/OverlayManager.h"
+#include "transactions/TransactionUtils.h"
 #include "util/Logging.h"
 #include "util/StatusManager.h"
 
@@ -29,6 +32,10 @@
 #include "test/TestAccount.h"
 #include "test/TxTests.h"
 #include <regex>
+#include <rpc/rawtransaction.h>
+#include <rpc/protocol.h>
+
+static const int CADDR_TIME_VERSION = 31402;
 
 using namespace stellar::txtest;
 
@@ -69,7 +76,6 @@ CommandHandler::CommandHandler(Application& app) : mApp(app)
 
     addRoute("bans", &CommandHandler::bans);
     addRoute("catchup", &CommandHandler::catchup);
-    addRoute("checkdb", &CommandHandler::checkdb);
     addRoute("connect", &CommandHandler::connect);
     addRoute("dropcursor", &CommandHandler::dropcursor);
     addRoute("droppeer", &CommandHandler::dropPeer);
@@ -91,7 +97,47 @@ CommandHandler::CommandHandler(Application& app) : mApp(app)
     addRoute("tx", &CommandHandler::tx);
     addRoute("upgrades", &CommandHandler::upgrades);
     addRoute("unban", &CommandHandler::unban);
+    addRoute("utxo", &CommandHandler::utxoHandler);
 }
+
+
+void 
+CommandHandler::utxoHandler(std::string const& params, std::string& retStr)
+{
+    std::ostringstream output;
+    const std::string prefix("?hex=");
+    if (params.compare(0, prefix.size(), prefix) == 0)
+    {
+        std::string txHex = params.substr(prefix.size());
+        if(txHex == "")
+        {   
+            throw std::invalid_argument("Tx hex can not be null or empty");
+        }
+        else
+        {   
+            try
+            {
+                output << SendRawTransactionZagg(txHex);
+                if (CADDR_TIME_VERSION >= 100)
+                {
+                    std::cout << "success";
+                }
+            }
+            catch (const UniValue& objError)
+            {   
+                output << JSONRPCReply(UniValue::VNULL, objError, UniValue::VOBJ);
+                std::cout << output.str() << std::endl;
+            }   
+        }
+    }
+    else
+    {
+        throw std::invalid_argument("Must specify a tx hex: utxo?hex=<tx in "
+                                "hex format>\"}");
+    }
+    retStr = output.str();
+}
+
 
 void
 CommandHandler::addRoute(std::string const& name, HandlerRoute route)
@@ -153,14 +199,16 @@ CommandHandler::testAcc(std::string const& params, std::string& retStr)
         {
             key = getAccount(accName->second.c_str());
         }
-        auto acc = loadAccount(key.getPublicKey(), mApp, false);
+
+        LedgerTxn ltx(mApp.getLedgerTxnRoot());
+        auto acc = stellar::loadAccount(ltx, key.getPublicKey());
         if (acc)
         {
+            auto const& ae = acc.current().data.account();
             root["name"] = accName->second;
-            root["id"] = KeyUtils::toStrKey(acc->getID());
-            root["balance"] = (Json::Int64)acc->getBalance();
-            root["seqnum"] = (Json::UInt64)acc->getSeqNum();
-            root["accountmarker"]  = (Json::UInt64)acc->getAccountMarker();
+            root["id"] = KeyUtils::toStrKey(ae.accountID);
+            root["balance"] = (Json::Int64)ae.balance;
+            root["seqnum"] = (Json::UInt64)ae.seqNum;
         }
     }
     retStr = root.toStyledString();
@@ -250,8 +298,6 @@ CommandHandler::fileNotFound(std::string const& params, std::string& retStr)
         "</p><p><h1> /catchup?ledger=NNN[&mode=MODE]</h1>"
         "triggers the instance to catch up to ledger NNN from history; "
         "mode is either 'minimal' (the default, if omitted) or 'complete'."
-        "</p><p><h1> /checkdb</h1>"
-        "triggers the instance to perform an integrity check of the database."
         "</p><p><h1> /connect?peer=NAME&port=NNN</h1>"
         "triggers the instance to connect to peer NAME at port NNN."
         "</p><p><h1> "
@@ -584,13 +630,6 @@ CommandHandler::catchup(std::string const& params, std::string& retStr)
 }
 
 void
-CommandHandler::checkdb(std::string const& params, std::string& retStr)
-{
-    mApp.checkDB();
-    retStr = "CheckDB started.";
-}
-
-void
 CommandHandler::connect(std::string const& params, std::string& retStr)
 {
     std::map<std::string, std::string> retMap;
@@ -880,18 +919,13 @@ CommandHandler::tx(std::string const& params, std::string& retStr)
                 msg.transaction() = envelope;
                 mApp.getOverlayManager().broadcastMessage(msg);
             }
-
-            output << "{"
-                   << "\"status\": "
-                   << "\"" << Herder::TX_STATUS_STRING[status] << "\"";
             if (status == Herder::TX_STATUS_ERROR)
             {
                 std::string resultBase64;
                 auto resultBin = xdr::xdr_to_opaque(transaction->getResult());
                 resultBase64.reserve(decoder::encoded_size64(resultBin.size()) +
                                      1);
-                resultBase64 = decoder::encode_b64(resultBin);
-
+                resultBase64 = decoder::encode_b64(resultBin);       
                 output << " , \"error\": \"" << resultBase64 << "\"";
             }
             output << "}";

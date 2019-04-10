@@ -6,10 +6,13 @@
 #include "crypto/Hex.h"
 #include "herder/LedgerCloseData.h"
 #include "ledger/LedgerManager.h"
+#include "ledger/LedgerTxn.h"
+#include "ledger/LedgerTxnHeader.h"
 #include "lib/catch.hpp"
 #include "main/Application.h"
 #include "test/TestUtils.h"
 #include "test/test.h"
+#include "transactions/TransactionUtils.h"
 #include "util/Logging.h"
 #include "util/Timer.h"
 #include "xdrpp/marshal.h"
@@ -106,9 +109,11 @@ TEST_CASE("base reserve", "[ledger]")
     int64 expectedReserve = 2000200000000ll;
 
     for_versions_to(8, *app, [&]() {
-        REQUIRE(app->getLedgerManager().getMinBalance(n) < expectedReserve);
+        LedgerTxn ltx(app->getLedgerTxnRoot());
+        REQUIRE(getMinBalance(ltx.loadHeader(), n) < expectedReserve);
     });
     for_versions_from(9, *app, [&]() {
-        REQUIRE(app->getLedgerManager().getMinBalance(n) == expectedReserve);
+        LedgerTxn ltx(app->getLedgerTxnRoot());
+        REQUIRE(getMinBalance(ltx.loadHeader(), n) == expectedReserve);
     });
 }

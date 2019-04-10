@@ -44,7 +44,7 @@ Config::Config() : NODE_SEED(SecretKey::random())
     FORCE_SCP = false;
     LEDGER_PROTOCOL_VERSION = CURRENT_LEDGER_PROTOCOL_VERSION;
 
-    OVERLAY_PROTOCOL_MIN_VERSION = 6;
+    OVERLAY_PROTOCOL_MIN_VERSION = 7;
     OVERLAY_PROTOCOL_VERSION = 7;
 
     VERSION_STR = STELLAR_CORE_VERSION;
@@ -64,6 +64,7 @@ Config::Config() : NODE_SEED(SecretKey::random())
     USE_CONFIG_FOR_GENESIS = false;
     FAILURE_SAFETY = -1;
     UNSAFE_QUORUM = false;
+    DISABLE_BUCKET_GC = false;
 
     LOG_FILE_PATH = "stellar-core.%datetime{%Y.%M.%d-%H:%m:%s}.log";
     BUCKET_DIR_PATH = "buckets";
@@ -91,6 +92,9 @@ Config::Config() : NODE_SEED(SecretKey::random())
 
     DATABASE = SecretValue{"sqlite3://:memory:"};
     NTP_SERVER = "pool.ntp.org";
+
+    ENTRY_CACHE_SIZE = 4096;
+    BEST_OFFERS_CACHE_SIZE = 64;
 }
 
 namespace
@@ -239,6 +243,14 @@ Config::loadQset(std::shared_ptr<cpptoml::toml_group> group, SCPQuorumSet& qset,
 void
 Config::load(std::string const& filename)
 {
+    if (filename != "-" && !fs::exists(filename))
+    {
+        std::string s;
+        s = "No config file ";
+        s += filename + " found";
+        throw std::invalid_argument(s);
+    }
+
     LOG(DEBUG) << "Loading config from: " << filename;
     try
     {
@@ -503,6 +515,14 @@ Config::load(std::string const& filename)
             else if (item.first == "INVARIANT_CHECKS")
             {
                 INVARIANT_CHECKS = readStringArray(item);
+            }
+            else if (item.first == "ENTRY_CACHE_SIZE")
+            {
+                ENTRY_CACHE_SIZE = readInt<uint32_t>(item);
+            }
+            else if (item.first == "BEST_OFFERS_CACHE_SIZE")
+            {
+                BEST_OFFERS_CACHE_SIZE = readInt<uint32_t>(item);
             }
             else
             {
@@ -823,5 +843,14 @@ Config::getExpectedLedgerCloseTime() const
         return std::chrono::seconds{1};
     }
     return Herder::EXP_LEDGER_TIMESPAN_SECONDS;
+}
+
+void
+Config::setNoListen()
+{
+    // prevent opening up a port for other peers
+    RUN_STANDALONE = true;
+    HTTP_PORT = 0;
+    MANUAL_CLOSE = true;
 }
 }

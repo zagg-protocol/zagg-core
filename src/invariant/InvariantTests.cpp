@@ -10,8 +10,8 @@
 #include "invariant/Invariant.h"
 #include "invariant/InvariantDoesNotHold.h"
 #include "invariant/InvariantManager.h"
-#include "ledger/LedgerDelta.h"
 #include "ledger/LedgerTestUtils.h"
+#include "ledger/LedgerTxn.h"
 #include "lib/catch.hpp"
 #include "main/Application.h"
 #include "test/TestUtils.h"
@@ -63,7 +63,7 @@ class TestInvariant : public Invariant
     virtual std::string
     checkOnOperationApply(Operation const& operation,
                           OperationResult const& result,
-                          LedgerDelta const& delta) override
+                          LedgerTxnDelta const& ltxDelta) override
     {
         return mShouldFail ? "fail" : "";
     }
@@ -145,7 +145,7 @@ TEST_CASE("enable registered invariants regex", "[invariant]")
     }
 }
 
-TEST_CASE("onBucketApply fail/succeed", "[invariant]")
+TEST_CASE("onBucketApply fail succeed", "[invariant]")
 {
     {
         VirtualClock clock;
@@ -185,31 +185,32 @@ TEST_CASE("onBucketApply fail/succeed", "[invariant]")
     }
 }
 
-TEST_CASE("onOperationApply fail/succeed", "[invariant]")
+TEST_CASE("onOperationApply fail succeed", "[invariant]")
 {
     VirtualClock clock;
     Config cfg = getTestConfig();
     Application::pointer app = createTestApplication(clock, cfg);
 
     OperationResult res;
-    LedgerHeader lh(app->getLedgerManager().getCurrentLedgerHeader());
-    LedgerDelta ld(lh, app->getDatabase());
-
     SECTION("Fail")
     {
         app->getInvariantManager().registerInvariant<TestInvariant>(0, true);
         app->getInvariantManager().enableInvariant(
             TestInvariant::toString(0, true));
-        REQUIRE_THROWS_AS(
-            app->getInvariantManager().checkOnOperationApply({}, res, ld),
-            InvariantDoesNotHold);
+
+        LedgerTxn ltx(app->getLedgerTxnRoot());
+        REQUIRE_THROWS_AS(app->getInvariantManager().checkOnOperationApply(
+                              {}, res, ltx.getDelta()),
+                          InvariantDoesNotHold);
     }
     SECTION("Succeed")
     {
         app->getInvariantManager().registerInvariant<TestInvariant>(0, false);
         app->getInvariantManager().enableInvariant(
             TestInvariant::toString(0, false));
-        REQUIRE_NOTHROW(
-            app->getInvariantManager().checkOnOperationApply({}, res, ld));
+
+        LedgerTxn ltx(app->getLedgerTxnRoot());
+        REQUIRE_NOTHROW(app->getInvariantManager().checkOnOperationApply(
+            {}, res, ltx.getDelta()));
     }
 }

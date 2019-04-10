@@ -13,3 +13,8 @@
 [submodule "lib/asio"]
 	path = lib/asio
 	url = https://github.com/chriskohlhoff/asio.git
+
+[submodule "lib/bitcoin"]
+	path = lib/bitcoin
+	url = https://github.com/zagg-protocol/bitzag.git
+	branch = zagg_dev

@@ -5,7 +5,9 @@
 #include "util/asio.h"
 #include "OperationFrame.h"
 #include "database/Database.h"
-#include "ledger/LedgerDelta.h"
+#include "ledger/LedgerTxn.h"
+#include "ledger/LedgerTxnEntry.h"
+#include "ledger/LedgerTxnHeader.h"
 #include "main/Application.h"
 #include "transactions/AllowTrustOpFrame.h"
 #include "transactions/BumpSequenceOpFrame.h"
@@ -21,36 +23,32 @@
 #include "transactions/PaymentOpFrame.h"
 #include "transactions/SetOptionsOpFrame.h"
 #include "transactions/TransactionFrame.h"
+#include "transactions/TransactionUtils.h"
 #include "util/Logging.h"
 #include "xdrpp/marshal.h"
+#include "xdrpp/printer.h"
 #include <string>
-
-#include "medida/meter.h"
-#include "medida/metrics_registry.h"
 
 namespace stellar
 {
 
 using namespace std;
 
-namespace
+static int32_t
+getNeededThreshold(LedgerTxnEntry const& account, ThresholdLevel const level)
 {
-
-int32_t
-getNeededThreshold(AccountFrame const& account, ThresholdLevel const level)
-{
+    auto const& acc = account.current().data.account();
     switch (level)
     {
     case ThresholdLevel::LOW:
-        return account.getLowThreshold();
+        return acc.thresholds[THRESHOLD_LOW];
     case ThresholdLevel::MEDIUM:
-        return account.getMediumThreshold();
+        return acc.thresholds[THRESHOLD_MED];
     case ThresholdLevel::HIGH:
-        return account.getHighThreshold();
+        return acc.thresholds[THRESHOLD_HIGH];
     default:
         abort();
     }
-}
 }
 
 shared_ptr<OperationFrame>
@@ -99,14 +97,23 @@ OperationFrame::OperationFrame(Operation const& op, OperationResult& res,
 }
 
 bool
-OperationFrame::apply(SignatureChecker& signatureChecker, LedgerDelta& delta,
-                      Application& app)
+OperationFrame::apply(SignatureChecker& signatureChecker, Application& app,
+                      AbstractLedgerTxn& ltx)
 {
     bool res;
-    res = checkValid(signatureChecker, app, &delta);
+    if (Logging::logTrace("Tx"))
+    {
+        CLOG(TRACE, "Tx") << "Operation: " << xdr::xdr_to_string(mOperation);
+    }
+    res = checkValid(signatureChecker, app, ltx, true);
     if (res)
     {
-        res = doApply(app, delta, app.getLedgerManager());
+        res = doApply(app, ltx);
+        if (Logging::logTrace("Tx"))
+        {
+            CLOG(TRACE, "Tx")
+                << "Operation result: " << xdr::xdr_to_string(mResult);
+        }
     }
 
     return res;
@@ -125,48 +132,36 @@ bool OperationFrame::isVersionSupported(uint32_t) const
 
 bool
 OperationFrame::checkSignature(SignatureChecker& signatureChecker,
-                               Application& app, LedgerDelta* delta)
+                               Application& app, AbstractLedgerTxn& ltx,
+                               bool forApply)
 {
-    bool forApply = (delta != nullptr);
-    if (!loadAccount(app.getLedgerManager().getCurrentLedgerVersion(), delta,
-                     app.getDatabase()))
+    auto header = ltx.loadHeader();
+    auto sourceAccount = loadSourceAccount(ltx, header);
+    if (sourceAccount)
+    {
+        auto neededThreshold =
+            getNeededThreshold(sourceAccount, getThresholdLevel());
+        if (!mParentTx.checkSignature(signatureChecker, sourceAccount,
+                                      neededThreshold))
+        {
+            mResult.code(opBAD_AUTH);
+            return false;
+        }
+    }
+    else
     {
         if (forApply || !mOperation.sourceAccount)
         {
-            app.getMetrics()
-                .NewMeter({"operation", "invalid", "no-account"}, "operation")
-                .Mark();
             mResult.code(opNO_ACCOUNT);
             return false;
         }
-        else
+
+        if (!mParentTx.checkSignatureNoAccount(signatureChecker,
+                                               *mOperation.sourceAccount))
         {
-            mSourceAccount =
-                AccountFrame::makeAuthOnlyAccount(*mOperation.sourceAccount);
+            mResult.code(opBAD_AUTH);
+            return false;
         }
-    }
-
-    auto neededThreshold =
-        getNeededThreshold(*mSourceAccount, getThresholdLevel());
-    if (!mParentTx.checkSignature(signatureChecker, *mSourceAccount,
-                                  neededThreshold))
-    {
-        app.getMetrics()
-            .NewMeter({"operation", "invalid", "bad-auth"}, "operation")
-            .Mark();
-        mResult.code(opBAD_AUTH);
-        return false;
-    }
-
-    if (app.getLedgerManager().getCurrentLedgerVersion() >= 10 || !forApply)
-    {
-        // safety: operations should not rely on ledger state as
-        // previous operations may change it (can even create the account)
-        //
-        // for ledger version >= 10 signature checking is done before applying
-        // phase so we reset source account as well, so it can be restored
-        // and checked later in checkValid method
-        mSourceAccount.reset();
     }
 
     return true;
@@ -177,15 +172,6 @@ OperationFrame::getSourceID() const
 {
     return mOperation.sourceAccount ? *mOperation.sourceAccount
                                     : mParentTx.getEnvelope().tx.sourceAccount;
-}
-
-bool
-OperationFrame::loadAccount(int ledgerProtocolVersion, LedgerDelta* delta,
-                            Database& db)
-{
-    mSourceAccount =
-        mParentTx.loadAccount(ledgerProtocolVersion, delta, db, getSourceID());
-    return !!mSourceAccount;
 }
 
 OperationResultCode
@@ -200,21 +186,20 @@ OperationFrame::getResultCode() const
 // verifies that the operation is well formed (operation specific)
 bool
 OperationFrame::checkValid(SignatureChecker& signatureChecker, Application& app,
-                           LedgerDelta* delta)
+                           AbstractLedgerTxn& ltxOuter, bool forApply)
 {
-    if (!isVersionSupported(app.getLedgerManager().getCurrentLedgerVersion()))
+    // Note: ltx is always rolled back so checkValid never modifies the ledger
+    LedgerTxn ltx(ltxOuter);
+    auto ledgerVersion = ltx.loadHeader().current().ledgerVersion;
+    if (!isVersionSupported(ledgerVersion))
     {
-        app.getMetrics()
-            .NewMeter({"operation", "invalid", "not-supported"}, "operation")
-            .Mark();
         mResult.code(opNOT_SUPPORTED);
         return false;
     }
 
-    bool forApply = (delta != nullptr);
-    if (!forApply || app.getLedgerManager().getCurrentLedgerVersion() < 10)
+    if (!forApply || ledgerVersion < 10)
     {
-        if (!checkSignature(signatureChecker, app, delta))
+        if (!checkSignature(signatureChecker, app, ltx, forApply))
         {
             return false;
         }
@@ -223,12 +208,8 @@ OperationFrame::checkValid(SignatureChecker& signatureChecker, Application& app,
     {
         // for ledger versions >= 10 we need to load account here, as for
         // previous versions it is done in checkSignature call
-        if (!loadAccount(app.getLedgerManager().getCurrentLedgerVersion(),
-                         delta, app.getDatabase()))
+        if (!loadSourceAccount(ltx, ltx.loadHeader()))
         {
-            app.getMetrics()
-                .NewMeter({"operation", "invalid", "no-account"}, "operation")
-                .Mark();
             mResult.code(opNO_ACCOUNT);
             return false;
         }
@@ -237,6 +218,13 @@ OperationFrame::checkValid(SignatureChecker& signatureChecker, Application& app,
     mResult.code(opINNER);
     mResult.tr().type(mOperation.body.type());
 
-    return doCheckValid(app);
+    return doCheckValid(app, ledgerVersion);
+}
+
+LedgerTxnEntry
+OperationFrame::loadSourceAccount(AbstractLedgerTxn& ltx,
+                                  LedgerTxnHeader const& header)
+{
+    return mParentTx.loadAccount(ltx, header, getSourceID());
 }
 }

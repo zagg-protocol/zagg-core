@@ -17,6 +17,7 @@
 #include "herder/LedgerCloseData.h"
 #include "ledger/LedgerManager.h"
 #include "ledger/LedgerTestUtils.h"
+#include "ledger/LedgerTxn.h"
 #include "lib/catch.hpp"
 #include "main/Application.h"
 #include "medida/meter.h"
@@ -458,7 +459,7 @@ TEST_CASE("bucket tombstones expire at bottom level", "[bucket][tombstones]")
     REQUIRE(pair2.second == 0);
 }
 
-TEST_CASE("file-backed buckets", "[bucket][bucketbench]")
+TEST_CASE("file backed buckets", "[bucket][bucketbench]")
 {
     VirtualClock clock;
     Config const& cfg = getTestConfig();
@@ -764,15 +765,16 @@ static Hash
 closeLedger(Application& app)
 {
     auto& lm = app.getLedgerManager();
-    auto lclHash = lm.getLastClosedLedgerHeader().hash;
+    auto lcl = lm.getLastClosedLedgerHeader();
+    uint32_t ledgerNum = lcl.header.ledgerSeq + 1;
     CLOG(INFO, "Bucket")
-        << "Artificially closing ledger " << lm.getLedgerNum()
-        << " with lcl=" << hexAbbrev(lclHash) << ", buckets="
+        << "Artificially closing ledger " << ledgerNum
+        << " with lcl=" << hexAbbrev(lcl.hash) << ", buckets="
         << hexAbbrev(app.getBucketManager().getBucketList().getHash());
-    auto txSet = std::make_shared<TxSetFrame>(lclHash);
-    StellarValue sv(txSet->getContentsHash(), lm.getCloseTime(),
+    auto txSet = std::make_shared<TxSetFrame>(lcl.hash);
+    StellarValue sv(txSet->getContentsHash(), lcl.header.scpValue.closeTime,
                     emptyUpgradeSteps, 0);
-    LedgerCloseData lcd(lm.getLedgerNum(), txSet, sv);
+    LedgerCloseData lcd(ledgerNum, txSet, sv);
     lm.valueExternalized(lcd);
     return lm.getLastClosedLedgerHeader().hash;
 }
@@ -895,7 +897,7 @@ TEST_CASE("bucket persistence over app restart", "[bucket][bucketpersist]")
     }
 }
 
-TEST_CASE("BucketList sizeOf* and oldestLedgerIn* relations", "[bucket][count]")
+TEST_CASE("BucketList sizeOf and oldestLedgerIn relations", "[bucket][count]")
 {
     std::default_random_engine gen;
     std::uniform_int_distribution<uint32_t> dist;
@@ -1012,7 +1014,6 @@ TEST_CASE("BucketList check bucket sizes", "[bucket][count]")
 
     for (uint32_t ledgerSeq = 1; ledgerSeq <= 256; ++ledgerSeq)
     {
-        CLOG(INFO, "Bucket") << "Ledger = " << ledgerSeq;
         if (ledgerSeq >= 2)
         {
             app->getClock().crank(false);
@@ -1025,46 +1026,6 @@ TEST_CASE("BucketList check bucket sizes", "[bucket][count]")
             checkBucketSizeAndBounds(bl, ledgerSeq, level, true);
             checkBucketSizeAndBounds(bl, ledgerSeq, level, false);
         }
-    }
-}
-
-TEST_CASE("checkdb succeeding", "[bucket][checkdb]")
-{
-    VirtualClock clock;
-    Config cfg(getTestConfig());
-    cfg.ARTIFICIALLY_GENERATE_LOAD_FOR_TESTING = true;
-    Application::pointer app = createTestApplication(clock, cfg);
-    app->start();
-
-    std::vector<stellar::LedgerKey> emptySet;
-
-    // Create accounts
-    app->generateLoad(true, 1000, 0, 0, 1000, 100, false);
-    auto& m = app->getMetrics();
-    while (m.NewMeter({"loadgen", "run", "complete"}, "run").count() == 0)
-    {
-        clock.crank(false);
-    }
-
-    SECTION("successful checkdb")
-    {
-        app->checkDB();
-        while (m.NewTimer({"bucket", "checkdb", "execute"}).count() == 0)
-        {
-            clock.crank(false);
-        }
-        REQUIRE(
-            m.NewMeter({"bucket", "checkdb", "object-compare"}, "comparison")
-                .count() >= 10);
-    }
-
-    SECTION("failing checkdb")
-    {
-        app->checkDB();
-        app->getDatabase().getSession()
-            << ("UPDATE accounts SET balance = balance * 2"
-                " WHERE accountid = (SELECT accountid FROM accounts LIMIT 1);");
-        REQUIRE_THROWS(clock.crank(false));
     }
 }
 
@@ -1093,20 +1054,21 @@ TEST_CASE("bucket apply", "[bucket]")
     std::shared_ptr<Bucket> death =
         Bucket::fresh(app->getBucketManager(), noLive, dead);
 
-    auto& db = app->getDatabase();
-    auto& sess = db.getSession();
-
     CLOG(INFO, "Bucket") << "Applying bucket with " << live.size()
                          << " live entries";
-    birth->apply(db);
-    auto count = AccountFrame::countObjects(sess);
-    REQUIRE(count == live.size() + 1 /* root account */);
+    birth->apply(*app);
+    {
+        auto count = app->getLedgerTxnRoot().countObjects(ACCOUNT);
+        REQUIRE(count == live.size() + 1 /* root account */);
+    }
 
     CLOG(INFO, "Bucket") << "Applying bucket with " << dead.size()
                          << " dead entries";
-    death->apply(db);
-    count = AccountFrame::countObjects(sess);
-    REQUIRE(count == 1);
+    death->apply(*app);
+    {
+        auto count = app->getLedgerTxnRoot().countObjects(ACCOUNT);
+        REQUIRE(count == 1 /* root account */);
+    }
 }
 
 TEST_CASE("bucket apply bench", "[bucketbench][!hide]")
@@ -1130,13 +1092,11 @@ TEST_CASE("bucket apply bench", "[bucketbench][!hide]")
         std::shared_ptr<Bucket> birth =
             Bucket::fresh(app->getBucketManager(), live, noDead);
 
-        auto& db = app->getDatabase();
-
         CLOG(INFO, "Bucket")
             << "Applying bucket with " << live.size() << " live entries";
         // note: we do not wrap the `apply` call inside a transaction
         // as bucket applicator commits to the database incrementally
-        birth->apply(db);
+        birth->apply(*app);
     };
 
     SECTION("sqlite")

@@ -12,17 +12,12 @@
 #include "history/FileTransferInfo.h"
 #include "history/HistoryArchive.h"
 #include "history/HistoryManager.h"
-#include "ledger/LedgerHeaderFrame.h"
+#include "ledger/LedgerHeaderUtils.h"
 #include "main/Application.h"
 #include "main/Config.h"
 #include "transactions/TransactionFrame.h"
 #include "util/Logging.h"
 #include "util/XDRStream.h"
-
-#include "medida/counter.h"
-#include "medida/metrics_registry.h"
-
-#include <soci.h>
 
 namespace stellar
 {
@@ -98,8 +93,8 @@ StateSnapshot::writeHistoryBlocks() const
         CLOG(DEBUG, "History") << "Streaming " << count
                                << " ledgers worth of history, from " << begin;
 
-        nHeaders = LedgerHeaderFrame::copyLedgerHeadersToStream(
-            mApp.getDatabase(), sess, begin, count, ledgerOut);
+        nHeaders = LedgerHeaderUtils::copyToStream(mApp.getDatabase(), sess,
+                                                   begin, count, ledgerOut);
         size_t nTxs = TransactionFrame::copyTransactionsToStream(
             mApp.getNetworkID(), mApp.getDatabase(), sess, begin, count, txOut,
             txResultOut);

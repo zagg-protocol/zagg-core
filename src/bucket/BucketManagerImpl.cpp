@@ -6,6 +6,7 @@
 #include "bucket/BucketList.h"
 #include "crypto/Hex.h"
 #include "history/HistoryManager.h"
+#include "ledger/LedgerManager.h"
 #include "main/Application.h"
 #include "main/Config.h"
 #include "overlay/StellarXDR.h"
@@ -30,19 +31,15 @@ namespace stellar
 std::unique_ptr<BucketManager>
 BucketManager::create(Application& app)
 {
-    return std::make_unique<BucketManagerImpl>(app);
+    auto bucketManagerPtr = std::make_unique<BucketManagerImpl>(app);
+    bucketManagerPtr->initialize();
+    return bucketManagerPtr;
 }
 
 void
-BucketManager::dropAll(Application& app)
+BucketManagerImpl::initialize()
 {
-    std::string d = app.getConfig().BUCKET_DIR_PATH;
-
-    if (fs::exists(d))
-    {
-        CLOG(DEBUG, "Bucket") << "Deleting bucket directory: " << d;
-        fs::deltree(d);
-    }
+    std::string d = mApp.getConfig().BUCKET_DIR_PATH;
 
     if (!fs::exists(d))
     {
@@ -51,17 +48,48 @@ BucketManager::dropAll(Application& app)
             throw std::runtime_error("Unable to create bucket directory: " + d);
         }
     }
+
+    // Acquire exclusive lock on `buckets` folder
+    std::string lock = d + "/" + kLockFilename;
+
+    // there are many reasons the lock can fail so let lockFile throw
+    // directly for more clear error messages since we end up just raising
+    // a runtime exception anyway
+    fs::lockFile(lock);
+
+    mLockedBucketDir = std::make_unique<std::string>(d);
+    mTmpDirManager = std::make_unique<TmpDirManager>(d + "/tmp");
+}
+
+void
+BucketManagerImpl::dropAll()
+{
+    std::string d = mApp.getConfig().BUCKET_DIR_PATH;
+
+    if (fs::exists(d))
+    {
+        CLOG(DEBUG, "Bucket") << "Deleting bucket directory: " << d;
+        cleanDir();
+        fs::deltree(d);
+    }
+
+    initialize();
+}
+
+TmpDirManager&
+BucketManagerImpl::getTmpDirManager()
+{
+    return *mTmpDirManager;
 }
 
 BucketManagerImpl::BucketManagerImpl(Application& app)
     : mApp(app)
+    , mTmpDirManager(nullptr)
     , mWorkDir(nullptr)
     , mLockedBucketDir(nullptr)
-    , mBucketObjectInsert(
-          app.getMetrics().NewMeter({"bucket", "object", "insert"}, "object"))
-    , mBucketByteInsert(
-          app.getMetrics().NewMeter({"bucket", "byte", "insert"}, "byte"))
-    , mBucketAddBatch(app.getMetrics().NewTimer({"bucket", "batch", "add"}))
+    , mBucketObjectInsertBatch(app.getMetrics().NewMeter(
+          {"bucket", "batch", "objectsadded"}, "object"))
+    , mBucketAddBatch(app.getMetrics().NewTimer({"bucket", "batch", "addtime"}))
     , mBucketSnapMerge(app.getMetrics().NewTimer({"bucket", "snap", "merge"}))
     , mSharedBucketsSize(
           app.getMetrics().NewCounter({"bucket", "memory", "shared"}))
@@ -112,7 +140,7 @@ BucketManagerImpl::getTmpDir()
     std::lock_guard<std::recursive_mutex> lock(mBucketMutex);
     if (!mWorkDir)
     {
-        TmpDir t = mApp.getTmpDirManager().tmpDir("bucket");
+        TmpDir t = mTmpDirManager->tmpDir("bucket");
         mWorkDir = std::make_unique<TmpDir>(std::move(t));
     }
     return mWorkDir->getName();
@@ -121,23 +149,16 @@ BucketManagerImpl::getTmpDir()
 std::string const&
 BucketManagerImpl::getBucketDir()
 {
-    if (!mLockedBucketDir)
-    {
-        std::string d = mApp.getConfig().BUCKET_DIR_PATH;
-
-        std::string lock = d + "/" + kLockFilename;
-
-        // there are many reasons the lock can fail so let lockFile throw
-        // directly for more clear error messages since we end up just raising
-        // a runtime exception anyway
-        fs::lockFile(lock);
-
-        mLockedBucketDir = std::make_unique<std::string>(d);
-    }
     return *(mLockedBucketDir);
 }
 
 BucketManagerImpl::~BucketManagerImpl()
+{
+    cleanDir();
+}
+
+void
+BucketManagerImpl::cleanDir()
 {
     if (mLockedBucketDir)
     {
@@ -145,7 +166,10 @@ BucketManagerImpl::~BucketManagerImpl()
         std::string lock = d + "/" + kLockFilename;
         assert(fs::exists(lock));
         fs::unlockFile(lock);
+        mLockedBucketDir.reset();
     }
+    mWorkDir.reset();
+    mTmpDirManager.reset();
 }
 
 BucketList&
@@ -179,8 +203,6 @@ BucketManagerImpl::adoptFileAsBucket(std::string const& filename,
     }
     else
     {
-        mBucketObjectInsert.Mark(nObjects);
-        mBucketByteInsert.Mark(nBytes);
         std::string canonicalName = bucketFilename(hash);
         CLOG(DEBUG, "Bucket")
             << "Adopting bucket file " << filename << " as " << canonicalName;
@@ -241,28 +263,55 @@ BucketManagerImpl::getBucketByHash(uint256 const& hash)
 std::set<Hash>
 BucketManagerImpl::getReferencedBuckets() const
 {
-    auto referenced = std::set<Hash>{};
+    std::set<Hash> referenced;
+    // retain current bucket list
     for (uint32_t i = 0; i < BucketList::kNumLevels; ++i)
     {
         auto const& level = mBucketList.getLevel(i);
-        referenced.insert(level.getCurr()->getHash());
-        referenced.insert(level.getSnap()->getHash());
+        auto rit = referenced.insert(level.getCurr()->getHash());
+        if (rit.second)
+        {
+            CLOG(TRACE, "Bucket")
+                << binToHex(*rit.first) << " referenced by bucket list";
+        }
+        rit = referenced.insert(level.getSnap()->getHash());
+        if (rit.second)
+        {
+            CLOG(TRACE, "Bucket")
+                << binToHex(*rit.first) << " referenced by bucket list";
+        }
         for (auto const& h : level.getNext().getHashes())
         {
-            referenced.insert(hexToBin256(h));
+            rit = referenced.insert(hexToBin256(h));
+            if (rit.second)
+            {
+                CLOG(TRACE, "Bucket") << h << " referenced by bucket list";
+            }
+        }
+    }
+    // retain any bucket referenced by the last closed ledger as recorded in the
+    // database (as merge complete, the bucket list drifts from that state)
+    auto lclHas = mApp.getLedgerManager().getLastClosedLedgerHAS();
+    auto lclBuckets = lclHas.allBuckets();
+    for (auto const& h : lclBuckets)
+    {
+        auto rit = referenced.insert(hexToBin256(h));
+        if (rit.second)
+        {
+            CLOG(TRACE, "Bucket") << h << " referenced by LCL";
         }
     }
 
-    // Implicitly retain any buckets that are referenced by a state in
-    // the publish queue.
+    // retain buckets that are referenced by a state in the publish queue.
     auto pub = mApp.getHistoryManager().getBucketsReferencedByPublishQueue();
     {
         for (auto const& h : pub)
         {
-            CLOG(DEBUG, "Bucket")
-                << "BucketManager::forgetUnreferencedBuckets: " << h
-                << " referenced by publish queue";
-            referenced.insert(hexToBin256(h));
+            auto rit = referenced.insert(hexToBin256(h));
+            if (rit.second)
+            {
+                CLOG(TRACE, "Bucket") << h << " referenced by publish queue";
+            }
         }
     }
 
@@ -272,6 +321,11 @@ BucketManagerImpl::getReferencedBuckets() const
 void
 BucketManagerImpl::cleanupStaleFiles()
 {
+    if (mApp.getConfig().DISABLE_BUCKET_GC)
+    {
+        return;
+    }
+
     std::lock_guard<std::recursive_mutex> lock(mBucketMutex);
     auto referenced = getReferencedBuckets();
     std::transform(std::begin(mSharedBuckets), std::end(mSharedBuckets),
@@ -324,7 +378,7 @@ BucketManagerImpl::forgetUnreferencedBuckets()
             CLOG(TRACE, "Bucket")
                 << "BucketManager::forgetUnreferencedBuckets dropping "
                 << filename;
-            if (!filename.empty())
+            if (!filename.empty() && !mApp.getConfig().DISABLE_BUCKET_GC)
             {
                 CLOG(TRACE, "Bucket") << "removing bucket file: " << filename;
                 std::remove(filename.c_str());
@@ -343,6 +397,7 @@ BucketManagerImpl::addBatch(Application& app, uint32_t currLedger,
                             std::vector<LedgerKey> const& deadEntries)
 {
     auto timer = mBucketAddBatch.TimeScope();
+    mBucketObjectInsertBatch.Mark(liveEntries.size());
     mBucketList.addBatch(app, currLedger, liveEntries, deadEntries);
 }
 

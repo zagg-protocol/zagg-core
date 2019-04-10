@@ -2,7 +2,7 @@
 
 SUBDIRS = lib src
 AM_EXTRA_RECURSIVE_TARGETS = check-valgrind
-ACLOCAL_AMFLAGS = -I m4
+ACLOCAL_AMFLAGS = -I build-aux/m4
 
 dist_doc_DATA = docs/stellar-core_example.cfg			\
 	docs/stellar-core_standalone.cfg			\

@@ -6,7 +6,6 @@
 #include "util/asio.h"
 
 #include "history/HistoryManager.h"
-#include "ledger/LedgerHeaderFrame.h"
 #include "ledger/LedgerManager.h"
 #include "ledger/SyncingLedgerChain.h"
 #include "main/PersistentState.h"
@@ -29,25 +28,24 @@ class Histogram;
 
 namespace stellar
 {
+class AbstractLedgerTxn;
 class Application;
 class Database;
-class LedgerDelta;
+class LedgerTxnHeader;
 
 class LedgerManagerImpl : public LedgerManager
 {
     LedgerHeaderHistoryEntry mLastClosedLedger;
-    LedgerHeaderFrame::pointer mCurrentLedger;
 
     Application& mApp;
     medida::Timer& mTransactionApply;
     medida::Histogram& mTransactionCount;
+    medida::Histogram& mOperationCount;
+    medida::Counter& mInternalErrorCount;
     medida::Timer& mLedgerClose;
     medida::Timer& mLedgerAgeClosed;
     medida::Counter& mLedgerAge;
-    medida::Counter& mLedgerStateCurrent;
-    medida::Timer& mLedgerStateChanges;
     VirtualClock::time_point mLastClose;
-    VirtualClock::time_point mLastStateChange;
 
     medida::Counter& mSyncingLedgersSize;
     SyncingLedgerChain mSyncingLedgers;
@@ -68,14 +66,16 @@ class LedgerManagerImpl : public LedgerManager
     void applyBufferedLedgers();
 
     void processFeesSeqNums(std::vector<TransactionFramePtr>& txs,
-                            LedgerDelta& delta);
+                            AbstractLedgerTxn& ltxOuter);
+
     void applyTransactions(std::vector<TransactionFramePtr>& txs,
-                           LedgerDelta& ledgerDelta,
+                           AbstractLedgerTxn& ltx,
                            TransactionResultSet& txResultSet);
 
-    void ledgerClosed(LedgerDelta const& delta);
-    void storeCurrentLedger();
-    void advanceLedgerPointers();
+    void ledgerClosed(AbstractLedgerTxn& ltx);
+
+    void storeCurrentLedger(LedgerHeader const& header);
+    void advanceLedgerPointers(LedgerHeader const& header);
 
     enum class CloseLedgerIfResult
     {
@@ -99,12 +99,12 @@ class LedgerManagerImpl : public LedgerManager
 
     void valueExternalized(LedgerCloseData const& ledgerData) override;
 
-    uint32_t getLedgerNum() const override;
+    uint32_t getLastMaxTxSetSize() const override;
+    int64_t getLastMinBalance(uint32_t ownerCount) const override;
+    uint32_t getLastReserve() const override;
+    uint32_t getLastTxFee() const override;
+
     uint32_t getLastClosedLedgerNum() const override;
-    int64_t getMinBalance(uint32_t ownerCount) const override;
-    uint32_t getTxFee() const override;
-    uint32_t getMaxTxSetSize() const override;
-    uint64_t getCloseTime() const override;
     uint64_t secondsSinceLastLedgerClose() const override;
     void syncMetrics() override;
 
@@ -114,21 +114,16 @@ class LedgerManagerImpl : public LedgerManager
         std::function<void(asio::error_code const& ec)> handler) override;
 
     LedgerHeaderHistoryEntry const& getLastClosedLedgerHeader() const override;
-    LedgerHeader const& getCurrentLedgerHeader() const override;
-    LedgerHeader& getCurrentLedgerHeader() override;
-    uint32_t getCurrentLedgerVersion() const override;
+
+    HistoryArchiveState getLastClosedLedgerHAS() override;
 
     Database& getDatabase() override;
 
     void startCatchup(CatchupConfiguration configuration,
                       bool manualCatchup) override;
 
-    HistoryManager::LedgerVerificationStatus
-    verifyCatchupCandidate(LedgerHeaderHistoryEntry const&,
-                           bool manualCatchup) const override;
     void closeLedger(LedgerCloseData const& ledgerData) override;
     void deleteOldEntries(Database& db, uint32_t ledgerSeq,
                           uint32_t count) override;
-    void checkDbState() override;
 };
 }

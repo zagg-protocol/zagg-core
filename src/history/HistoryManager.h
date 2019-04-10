@@ -192,6 +192,7 @@ class HistoryManager
         VERIFY_STATUS_ERR_BAD_HASH,
         VERIFY_STATUS_ERR_BAD_LEDGER_VERSION,
         VERIFY_STATUS_ERR_OVERSHOT,
+        VERIFY_STATUS_ERR_UNDERSHOT,
         VERIFY_STATUS_ERR_MISSING_ENTRIES
     };
 
@@ -302,11 +303,6 @@ class HistoryManager
     // publication. This may be less than the number "started", but every
     // enqueued checkpoint should eventually start.
     virtual uint64_t getPublishQueueCount() = 0;
-
-    // Return the number of enqueued checkpoints that have been delayed due to
-    // the publish system being busy with a previous checkpoint. This indicates
-    // a degree of overloading in the publish system.
-    virtual uint64_t getPublishDelayCount() = 0;
 
     // Return the number of checkpoints that completed publication successfully.
     virtual uint64_t getPublishSuccessCount() = 0;

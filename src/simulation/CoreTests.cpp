@@ -55,7 +55,7 @@ printStats(int& nLedgers, std::chrono::system_clock::time_point tBegin,
 
 #include "lib/util/lrucache.hpp"
 
-TEST_CASE("3 nodes. 2 running. threshold 2", "[simulation][core3]")
+TEST_CASE("3 nodes 2 running threshold 2", "[simulation][core3]")
 {
     Simulation::Mode mode = Simulation::OVER_LOOPBACK;
     SECTION("Over loopback")
@@ -112,7 +112,7 @@ TEST_CASE("3 nodes. 2 running. threshold 2", "[simulation][core3]")
     LOG(DEBUG) << "done with core3 test";
 }
 
-TEST_CASE("core topology: 4 ledgers at scales 2..4", "[simulation]")
+TEST_CASE("core topology 4 ledgers at scales 2 to 4", "[simulation]")
 {
     Simulation::Mode mode = Simulation::OVER_LOOPBACK;
     SECTION("Over loopback")
@@ -260,7 +260,7 @@ hierarchicalTopoTest(int nLedgers, int nBranches, Simulation::Mode mode,
     // printStats(nLedgers, tBegin, sim);
 }
 
-TEST_CASE("hierarchical topology scales 1..3", "[simulation]")
+TEST_CASE("hierarchical topology scales 1 to 3", "[simulation]")
 {
     Hash networkID = sha256(getTestConfig().NETWORK_PASSPHRASE);
     Simulation::Mode mode = Simulation::OVER_LOOPBACK;
@@ -307,7 +307,7 @@ hierarchicalSimplifiedTest(int nLedgers, int nbCore, int nbOuterNodes,
     // printStats(nLedgers, tBegin, sim);
 }
 
-TEST_CASE("core-nodes with outer nodes", "[simulation]")
+TEST_CASE("core nodes with outer nodes", "[simulation]")
 {
     Hash networkID = sha256(getTestConfig().NETWORK_PASSPHRASE);
     Simulation::Mode mode = Simulation::OVER_LOOPBACK;
@@ -339,8 +339,9 @@ TEST_CASE("cycle4 topology", "[simulation]")
     REQUIRE(simulation->haveAllExternalized(nLedgers, 4));
 }
 
-TEST_CASE("Stress test on 2 nodes 3 accounts 10 random transactions 10tx/sec",
-          "[stress100][simulation][stress][long][!hide]")
+TEST_CASE(
+    "Stress test on 2 nodes 3 accounts 10 random transactions 10tx per sec",
+    "[stress100][simulation][stress][long][!hide]")
 {
     Hash networkID = sha256(getTestConfig().NETWORK_PASSPHRASE);
     Simulation::pointer simulation =
@@ -393,17 +394,16 @@ newLoadTestApp(VirtualClock& clock)
 #endif
                       getTestConfig(0, Config::TESTDB_ON_DISK_SQLITE);
     cfg.RUN_STANDALONE = false;
-    cfg.TESTING_UPGRADE_MAX_TX_PER_LEDGER = 10000;
-    Application::pointer appPtr = Application::create(clock, cfg);
-    appPtr->start();
     // force maxTxSetSize to avoid throwing txSets on the floor during the first
     // ledger close
-    appPtr->getLedgerManager().getCurrentLedgerHeader().maxTxSetSize =
-        cfg.TESTING_UPGRADE_MAX_TX_PER_LEDGER;
+    cfg.TESTING_UPGRADE_MAX_TX_PER_LEDGER = 10000;
+    cfg.USE_CONFIG_FOR_GENESIS = true;
+    Application::pointer appPtr = Application::create(clock, cfg);
+    appPtr->start();
     return appPtr;
 }
 
-TEST_CASE("Auto-calibrated single node load test", "[autoload][!hide]")
+TEST_CASE("Auto calibrated single node load test", "[autoload][!hide]")
 {
     VirtualClock clock(VirtualClock::REAL_TIME);
     auto appPtr = newLoadTestApp(clock);
@@ -488,7 +488,7 @@ class ScaleReporter
     }
 };
 
-TEST_CASE("Accounts vs. latency", "[scalability][!hide]")
+TEST_CASE("Accounts vs latency", "[scalability][!hide]")
 {
     ScaleReporter r({"accounts", "txcount", "latencymin", "latencymax",
                      "latency50", "latency95", "latency99"});
@@ -498,7 +498,7 @@ TEST_CASE("Accounts vs. latency", "[scalability][!hide]")
     auto& app = *appPtr;
 
     auto& lg = app.getLoadGenerator();
-    auto& txtime = app.getMetrics().NewTimer({"transaction", "op", "apply"});
+    auto& txtime = app.getMetrics().NewTimer({"ledger", "operation", "apply"});
     uint32_t numItems = 500000;
 
     // Create accounts
@@ -584,7 +584,7 @@ netTopologyTest(std::string const& name,
     }
 }
 
-TEST_CASE("Mesh nodes vs. network traffic", "[scalability][!hide]")
+TEST_CASE("Mesh nodes vs network traffic", "[scalability][!hide]")
 {
     netTopologyTest("mesh", [&](int numNodes) -> Simulation::pointer {
         return Topologies::core(
@@ -599,7 +599,7 @@ TEST_CASE("Mesh nodes vs. network traffic", "[scalability][!hide]")
     });
 }
 
-TEST_CASE("Cycle nodes vs. network traffic", "[scalability][!hide]")
+TEST_CASE("Cycle nodes vs network traffic", "[scalability][!hide]")
 {
     netTopologyTest("cycle", [&](int numNodes) -> Simulation::pointer {
         return Topologies::cycle(
@@ -614,7 +614,7 @@ TEST_CASE("Cycle nodes vs. network traffic", "[scalability][!hide]")
     });
 }
 
-TEST_CASE("Branched-cycle nodes vs. network traffic", "[scalability][!hide]")
+TEST_CASE("Branched cycle nodes vs network traffic", "[scalability][!hide]")
 {
     netTopologyTest("branchedcycle", [&](int numNodes) -> Simulation::pointer {
         return Topologies::branchedcycle(
@@ -629,7 +629,7 @@ TEST_CASE("Branched-cycle nodes vs. network traffic", "[scalability][!hide]")
     });
 }
 
-TEST_CASE("Bucket-list entries vs. write throughput", "[scalability][!hide]")
+TEST_CASE("Bucket list entries vs write throughput", "[scalability][!hide]")
 {
     VirtualClock clock;
     Config const& cfg = getTestConfig();
