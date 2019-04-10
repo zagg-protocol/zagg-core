@@ -16,6 +16,7 @@
 #include "test/test.h"
 #include "transactions/AllowTrustOpFrame.h"
 #include "transactions/BumpSequenceOpFrame.h"
+#include "transactions/MarkAccountOpFrame.h"
 #include "transactions/ChangeTrustOpFrame.h"
 #include "transactions/CreateAccountOpFrame.h"
 #include "transactions/InflationOpFrame.h"

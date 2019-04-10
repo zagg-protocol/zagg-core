@@ -19,7 +19,7 @@
 *.suo
 *.trs
 *.db
-
+*.bak
 # text editors
 *~
 *.swp
@@ -73,6 +73,12 @@
 /stellar-core-test-*
 /fuzz-findings/
 /my-history/
+
+# Ignore config folders
+dbs/*
+logs/*
+buckets/*
+tmp/*
 
 # Windows specific
 **/Build/*
