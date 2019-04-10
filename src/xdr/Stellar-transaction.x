@@ -284,7 +284,7 @@ struct Operation
     case BUMP_SEQUENCE:
         BumpSequenceOp bumpSequenceOp;
     case MARK_ACCOUNT:
-        MarkAccountOp markAccountOp;    
+        void;  
     }
     body;
 };
@@ -338,7 +338,7 @@ struct Transaction
     SequenceNumber seqNum;
 
     //Test data structure
-    AccountMarker accountMarker;
+    //AccountMarker accountMarker;
 
     // validity range (inclusive) for the last ledger close time
     TimeBounds* timeBounds;
