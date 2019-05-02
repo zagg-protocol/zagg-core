@@ -898,10 +898,15 @@ CommandHandler::tx(std::string const& params, std::string& retStr)
     {
         TransactionEnvelope envelope;
         std::string blob = params.substr(prefix.size());
+        std::cout << "the blob string is " << blob;
         std::vector<uint8_t> binBlob;
         decoder::decode_b64(blob, binBlob);
+        for (std::vector<uint8_t>::const_iterator i = binBlob.begin(); i != binBlob.end(); ++i)
+        std::cout << (char)*i;
+        //std::cout << "the bin blob string is " << std::string(binBlob);
 
         xdr::xdr_from_opaque(binBlob, envelope);
+        //std::cout << "the envelope string is " << envelope;
         TransactionFramePtr transaction =
             TransactionFrame::makeTransactionFromWire(mApp.getNetworkID(),
                                                       envelope);
@@ -923,6 +928,7 @@ CommandHandler::tx(std::string const& params, std::string& retStr)
             {
                 std::string resultBase64;
                 auto resultBin = xdr::xdr_to_opaque(transaction->getResult());
+                std::cout << "transaction result binary " << resultBin;
                 resultBase64.reserve(decoder::encoded_size64(resultBin.size()) +
                                      1);
                 resultBase64 = decoder::encode_b64(resultBin);       

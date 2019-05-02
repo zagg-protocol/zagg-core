@@ -149,6 +149,8 @@ Database::upgradeToCurrentSchema()
     auto vers = getDBSchemaVersion();
     if (vers > SCHEMA_VERSION)
     {
+        CLOG(INFO, "Database")
+            << "Schema version in loop 1 is " << SCHEMA_VERSION;
         std::string s = ("DB schema version " + std::to_string(vers) +
                          " is newer than application schema " +
                          std::to_string(SCHEMA_VERSION));
@@ -156,6 +158,8 @@ Database::upgradeToCurrentSchema()
     }
     while (vers < SCHEMA_VERSION)
     {
+        CLOG(INFO, "Database")
+            << "Schema version in loop 2 is " << SCHEMA_VERSION;
         ++vers;
         CLOG(INFO, "Database")
             << "Applying DB schema upgrade to version " << vers;

@@ -127,6 +127,7 @@ OperationFrame::getThresholdLevel() const
 
 bool OperationFrame::isVersionSupported(uint32_t) const
 {
+    std::cout <<"is_version called" << "\n";
     return true;
 }
 
@@ -144,6 +145,7 @@ OperationFrame::checkSignature(SignatureChecker& signatureChecker,
         if (!mParentTx.checkSignature(signatureChecker, sourceAccount,
                                       neededThreshold))
         {
+            std::cout << "check signature step 1" << "\n";
             mResult.code(opBAD_AUTH);
             return false;
         }
@@ -152,6 +154,7 @@ OperationFrame::checkSignature(SignatureChecker& signatureChecker,
     {
         if (forApply || !mOperation.sourceAccount)
         {
+            std::cout << "check signature step 2" << "\n";
             mResult.code(opNO_ACCOUNT);
             return false;
         }
@@ -159,6 +162,7 @@ OperationFrame::checkSignature(SignatureChecker& signatureChecker,
         if (!mParentTx.checkSignatureNoAccount(signatureChecker,
                                                *mOperation.sourceAccount))
         {
+            std::cout << "check signature step 3" << "\n";
             mResult.code(opBAD_AUTH);
             return false;
         }
@@ -194,13 +198,15 @@ OperationFrame::checkValid(SignatureChecker& signatureChecker, Application& app,
     if (!isVersionSupported(ledgerVersion))
     {
         mResult.code(opNOT_SUPPORTED);
-        return false;
+        std::cout << "operation check_valid step 1 " << ledgerVersion << "\n";
+        //return false;
     }
 
     if (!forApply || ledgerVersion < 10)
     {
         if (!checkSignature(signatureChecker, app, ltx, forApply))
         {
+            std::cout << "operation check_valid step 2" << "\n";
             return false;
         }
     }
@@ -211,6 +217,7 @@ OperationFrame::checkValid(SignatureChecker& signatureChecker, Application& app,
         if (!loadSourceAccount(ltx, ltx.loadHeader()))
         {
             mResult.code(opNO_ACCOUNT);
+            std::cout << "operation check_valid step 3" << "\n";
             return false;
         }
     }

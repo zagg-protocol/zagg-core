@@ -165,14 +165,17 @@ TransactionFrame::loadSourceAccount(AbstractLedgerTxn& ltx,
     auto res = loadAccount(ltx, header, getSourceID());
     if (header.current().ledgerVersion < 8)
     {
+        std::cout <<"ledger version"<<"\n";
         // this is buggy caching that existed in old versions of the protocol
         if (res)
         {
+            std::cout <<"account result not null"<<"\n";
             auto newest = ltx.getNewestVersion(LedgerEntryKey(res.current()));
             mCachedAccount = newest;
         }
         else
         {
+            std::cout <<"account result null"<<"\n";
             mCachedAccount.reset();
         }
     }
@@ -241,6 +244,7 @@ TransactionFrame::commonValidPreSeqNum(Application& app, AbstractLedgerTxn& ltx,
     if (mOperations.size() == 0)
     {
         getResult().result.code(txMISSING_OPERATION);
+        std::cout << "preseq step 1" << "\n";
         return false;
     }
 
@@ -251,12 +255,14 @@ TransactionFrame::commonValidPreSeqNum(Application& app, AbstractLedgerTxn& ltx,
         if (mEnvelope.tx.timeBounds->minTime > closeTime)
         {
             getResult().result.code(txTOO_EARLY);
+            std::cout << "preseq step 2" << "\n";
             return false;
         }
         if (mEnvelope.tx.timeBounds->maxTime &&
             (mEnvelope.tx.timeBounds->maxTime < closeTime))
         {
             getResult().result.code(txTOO_LATE);
+            std::cout << "preseq step 3" << "\n";
             return false;
         }
     }
@@ -264,12 +270,14 @@ TransactionFrame::commonValidPreSeqNum(Application& app, AbstractLedgerTxn& ltx,
     if (mEnvelope.tx.fee < getMinFee(header))
     {
         getResult().result.code(txINSUFFICIENT_FEE);
+        std::cout << "preseq step 4" << "\n";
         return false;
     }
 
     if (!loadSourceAccount(ltx, header))
     {
         getResult().result.code(txNO_ACCOUNT);
+        std::cout << "preseq step 5" << "\n";
         return false;
     }
 
@@ -340,6 +348,7 @@ TransactionFrame::commonValid(SignatureChecker& signatureChecker,
 
     if (!commonValidPreSeqNum(app, ltx, applying))
     {
+        std::cout << "transaction frame step 1" << "\n";
         return res;
     }
 
@@ -357,6 +366,7 @@ TransactionFrame::commonValid(SignatureChecker& signatureChecker,
         if (current == INT64_MAX || current + 1 != mEnvelope.tx.seqNum)
         {
             getResult().result.code(txBAD_SEQ);
+            std::cout << "transaction frame step 2" << "\n";
             return res;
         }
     }
@@ -368,6 +378,7 @@ TransactionFrame::commonValid(SignatureChecker& signatureChecker,
             sourceAccount.current().data.account().thresholds[THRESHOLD_LOW]))
     {
         getResult().result.code(txBAD_AUTH);
+        std::cout << "transaction frame step 3" << "\n";
         return res;
     }
 
@@ -384,9 +395,11 @@ TransactionFrame::commonValid(SignatureChecker& signatureChecker,
     if (getAvailableBalance(header, sourceAccount) < feeToPay)
     {
         getResult().result.code(txINSUFFICIENT_BALANCE);
+        std::cout << "transaction frame step 4" << "\n";
         return res;
     }
-
+    
+    std::cout << "transaction frame step 5" << "\n";
     return ValidationType::kFullyValid;
 }
 
@@ -495,6 +508,7 @@ TransactionFrame::checkValid(Application& app, AbstractLedgerTxn& ltxOuter,
                ValidationType::kFullyValid;
     if (res)
     {
+        std::cout << "check valid step 1" << "\n";
         for (auto& op : mOperations)
         {
             if (!op->checkValid(signatureChecker, app, ltx, false))
@@ -502,6 +516,7 @@ TransactionFrame::checkValid(Application& app, AbstractLedgerTxn& ltxOuter,
                 // it's OK to just fast fail here and not try to call
                 // checkValid on all operations as the resulting object
                 // is only used by applications
+                std::cout << "check valid step 2" << "\n";
                 markResultFailed();
                 return false;
             }
@@ -509,10 +524,12 @@ TransactionFrame::checkValid(Application& app, AbstractLedgerTxn& ltxOuter,
 
         if (!signatureChecker.checkAllSignaturesUsed())
         {
-            res = false;
-            getResult().result.code(txBAD_AUTH_EXTRA);
+            std::cout << "check valid step 3" << "\n";
+            //res = false;
+            //getResult().result.code(txBAD_AUTH_EXTRA);
         }
     }
+    std::cout << "check valid step 4" << "\n";
     return res;
 }
 

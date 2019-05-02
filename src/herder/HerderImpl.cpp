@@ -321,6 +321,7 @@ HerderImpl::recvTransaction(TransactionFramePtr tx)
 
     for (auto& map : mPendingTransactions)
     {
+        std::cout << "inside loop1"<<"\n";
         auto i = map.find(acc);
         if (i != map.end())
         {
@@ -339,6 +340,7 @@ HerderImpl::recvTransaction(TransactionFramePtr tx)
         LedgerTxn ltx(mApp.getLedgerTxnRoot());
         if (!tx->checkValid(mApp, ltx, highSeq))
         {
+            std::cout << "inside error condition 1" <<"\n";
             return TX_STATUS_ERROR;
         }
 
@@ -346,6 +348,7 @@ HerderImpl::recvTransaction(TransactionFramePtr tx)
         if (getAvailableBalance(ltx.loadHeader(), sourceAccount) < totFee)
         {
             tx->getResult().result.code(txINSUFFICIENT_BALANCE);
+            std::cout << "inside error condition 2"<<"\n";
             return TX_STATUS_ERROR;
         }
     }
