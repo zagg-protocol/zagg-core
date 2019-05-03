@@ -12,7 +12,7 @@ typedef opaque Thresholds[4];
 typedef string string32<32>;
 typedef string string64<64>;
 typedef int64 SequenceNumber;
-typedef int64 AccountMarker;
+typedef string AccountMarker;
 typedef opaque DataValue<64>;
 
 enum AssetType
