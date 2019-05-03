@@ -10,6 +10,7 @@
 #include "medida/metrics_registry.h"
 #include "transactions/TransactionFrame.h"
 #include "util/XDROperators.h"
+#include <rpc/mining.h>
 #include <rpc/rawtransaction.h>
 #include <univalue.h>
 #include <rpc/protocol.h>
@@ -41,16 +42,19 @@ MarkAccountOpFrame::isVersionSupported(uint32_t protocolVersion) const
 bool 
 MarkAccountOpFrame::doApply(Application& app, AbstractLedgerTxn& ltx)
 {
-    LedgerTxn ltxInner(ltx);
-    auto header = ltxInner.loadHeader();
-    auto sourceAccountEntry = loadSourceAccount(ltxInner, header);
-    auto& sourceAccount = sourceAccountEntry.current().data.account();
+    // this will return block hash of new block with one bitcoin tx
+    generateBlocks(NULL, mMarkAccountOp.accountMarker);
 
-    // Apply the bump (bump succeeds silently if bumpTo <= current)
-    {
-        sourceAccount.accountMarker = mMarkAccountOp.accountMarker;
-        ltxInner.commit();
-    }
+    // LedgerTxn ltxInner(ltx);
+    // auto header = ltxInner.loadHeader();
+    // auto sourceAccountEntry = loadSourceAccount(ltxInner, header);
+    // auto& sourceAccount = sourceAccountEntry.current().data.account();
+
+    // // Apply the bump (bump succeeds silently if bumpTo <= current)
+    // {
+    //     sourceAccount.accountMarker = mMarkAccountOp.accountMarker;
+    //     ltxInner.commit();
+    // }
 
     // Return successful results
     innerResult().code(MARK_ACCOUNT_SUCCESS);
