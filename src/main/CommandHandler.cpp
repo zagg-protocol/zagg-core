@@ -34,7 +34,7 @@
 #include <regex>
 #include <rpc/rawtransaction.h>
 #include <rpc/protocol.h>
-
+#include <rpc/mining.h>
 static const int CADDR_TIME_VERSION = 31402;
 
 using namespace stellar::txtest;
@@ -117,11 +117,27 @@ CommandHandler::utxoHandler(std::string const& params, std::string& retStr)
         {   
             try
             {
-                output << SendRawTransactionZagg(txHex);
-                if (CADDR_TIME_VERSION >= 100)
-                {
-                    std::cout << "success";
-                }
+
+                std::cout << "ebfore calling  generateBlocksZagg\n";
+                std::shared_ptr<CReserveScript> coinbaseScript(new CReserveScript());
+                UniValue blockHash = generateBlocks(coinbaseScript, txHex);
+                
+                return;
+                
+                std::cout << "success";
+
+                // output << SendRawTransactionZagg(txHex);
+                // if (CADDR_TIME_VERSION >= 100)
+                // {
+                //     std::cout << "ebfore calling  generateBlocksZagg\n";
+                //     std::shared_ptr<CReserveScript> coinbaseScript(new CReserveScript());
+                //     // this will return block hash of new block with one bitcoin tx
+                //     UniValue blockHash = generateBlocks(coinbaseScript, txHex);
+                //     std::string blockHashStr;
+                //     blockHash.setStr(blockHashStr);
+                //     std::cout << "inside do check valid of Mark account operation" << blockHashStr <<"\n";
+                //     std::cout << "success";
+                // }
             }
             catch (const UniValue& objError)
             {   
