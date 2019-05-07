@@ -47,11 +47,11 @@ MarkAccountOpFrame::doApply(Application& app, AbstractLedgerTxn& ltx)
     try
     {
         // this will return block hash of new block with one bitcoin tx
-        UniValue blockHash = generateBlocks(NULL, mMarkAccountOp.accountMarker);
-        std::string blockHashStr;
-        blockHash.setStr(blockHashStr);
+        // UniValue blockHash = generateBlocks(mMarkAccountOp.accountMarker);
+        // std::string blockHashStr;
+        // blockHash.setStr(blockHashStr);
         
-        std::cout << "inside do check valid of Mark account operation" << blockHashStr <<"\n";
+        // std::cout << "inside do check valid of Mark account operation" << blockHashStr <<"\n";
 
         // Return successful results
         innerResult().code(MARK_ACCOUNT_SUCCESS);

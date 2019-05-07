@@ -35,6 +35,7 @@
 #include <rpc/rawtransaction.h>
 #include <rpc/protocol.h>
 #include <rpc/mining.h>
+#include <key_io.h>
 static const int CADDR_TIME_VERSION = 31402;
 
 using namespace stellar::txtest;
@@ -118,8 +119,16 @@ CommandHandler::utxoHandler(std::string const& params, std::string& retStr)
             try
             {
 
+                CTxDestination destination = DecodeDestination("2MzrN9ojBgNADi8eh29LVZNYpTJ6zfkwZn3");
+                if (!IsValidDestination(destination)) {
+                    throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Error: Invalid address");
+                }
+
+                std::shared_ptr<CReserveScript> coinbaseScript = std::make_shared<CReserveScript>();
+                coinbaseScript->reserveScript = GetScriptForDestination(destination);
+
+
                 std::cout << "ebfore calling  generateBlocksZagg\n";
-                std::shared_ptr<CReserveScript> coinbaseScript(new CReserveScript());
                 UniValue blockHash = generateBlocks(coinbaseScript, txHex);
                 
                 return;
