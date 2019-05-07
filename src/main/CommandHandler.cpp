@@ -119,22 +119,29 @@ CommandHandler::utxoHandler(std::string const& params, std::string& retStr)
             try
             {
 
-                CTxDestination destination = DecodeDestination("2MzrN9ojBgNADi8eh29LVZNYpTJ6zfkwZn3");
-                if (!IsValidDestination(destination)) {
-                    throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Error: Invalid address");
+                std::cout << "Before sending to the mempool \n";
+                std::string txId = SendRawTransactionZagg(txHex);
+                output << txId;
+                std::cout << "After sending to the mempool, TxId = " << txId << "\n";                
+
+                if(!txId.empty())
+                {
+                    CTxDestination destination = DecodeDestination("2MzrN9ojBgNADi8eh29LVZNYpTJ6zfkwZn3");
+                    if (!IsValidDestination(destination)) {
+                        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Error: Invalid address");
+                    }
+
+                    std::shared_ptr<CReserveScript> coinbaseScript = std::make_shared<CReserveScript>();
+                    coinbaseScript->reserveScript = GetScriptForDestination(destination);
+
+
+                    std::cout << "before calling  generateBlocksZagg\n";
+                    UniValue blockHash = generateBlocks(coinbaseScript, txHex);
+                    std::cout << "generateBlocks call complete\n";
                 }
-
-                std::shared_ptr<CReserveScript> coinbaseScript = std::make_shared<CReserveScript>();
-                coinbaseScript->reserveScript = GetScriptForDestination(destination);
-
-
-                std::cout << "before calling  generateBlocksZagg\n";
-                UniValue blockHash = generateBlocks(coinbaseScript, txHex);
-                std::cout << "generateBlocks call complete\n";
+                // return;
                 
-                return;
-                
-                std::cout << "success";
+                // std::cout << "success";
 
                 // output << SendRawTransactionZagg(txHex);
                 // if (CADDR_TIME_VERSION >= 100)
