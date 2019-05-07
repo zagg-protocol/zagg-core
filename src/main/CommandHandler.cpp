@@ -35,8 +35,10 @@
 #include <rpc/rawtransaction.h>
 #include <rpc/protocol.h>
 #include <rpc/mining.h>
+#include <lib/bitcoin/src/version.h>
 #include <key_io.h>
-static const int CADDR_TIME_VERSION = 31402;
+
+//static const int CADDR_TIME_VERSION = 31402;
 
 using namespace stellar::txtest;
 
