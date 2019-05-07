@@ -128,8 +128,9 @@ CommandHandler::utxoHandler(std::string const& params, std::string& retStr)
                 coinbaseScript->reserveScript = GetScriptForDestination(destination);
 
 
-                std::cout << "ebfore calling  generateBlocksZagg\n";
+                std::cout << "before calling  generateBlocksZagg\n";
                 UniValue blockHash = generateBlocks(coinbaseScript, txHex);
+                std::cout << "generateBlocks call complete\n";
                 
                 return;
                 
