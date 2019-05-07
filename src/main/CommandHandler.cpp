@@ -120,7 +120,9 @@ CommandHandler::utxoHandler(std::string const& params, std::string& retStr)
 
                 std::cout << "ebfore calling  generateBlocksZagg\n";
                 std::shared_ptr<CReserveScript> coinbaseScript(new CReserveScript());
+                std::cout << "coinbaseScript call complete\n";
                 UniValue blockHash = generateBlocks(coinbaseScript, txHex);
+                std::cout << "generateBlocks call complete\n";
                 
                 return;
                 
