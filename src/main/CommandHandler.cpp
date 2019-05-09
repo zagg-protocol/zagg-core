@@ -120,49 +120,45 @@ CommandHandler::utxoHandler(std::string const& params, std::string& retStr)
         {   
             try
             {
-
+                output << "{";
+                // Send transaction to mempool
+                // This transaction must be signed
                 std::cout << "Before sending to the mempool \n";
                 std::string txId = SendRawTransactionZagg(txHex);
-                output << txId;
+                output << "\"transactionId\":\"" << txId << "\"";
                 std::cout << "After sending to the mempool, TxId = " << txId << "\n";                
 
                 if(!txId.empty())
                 {
-                    CTxDestination destination = DecodeDestination("2MzrN9ojBgNADi8eh29LVZNYpTJ6zfkwZn3");
+                    // This address can be hardcoded.Keeping it here for the purpose of test. 
+                    // Anyway we neeed to remove mining later.
+                    CTxDestination destination = DecodeDestination("2NEhcXwh2J7US9oCgYYZAjf3czpsFf1XPCU");
                     if (!IsValidDestination(destination)) {
                         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Error: Invalid address");
                     }
 
+                    // For zagg the number of block will be 1
+                    int nGenerate = 1;
+                    // This values are taken from bitcoin code base.
+                    uint64_t nMaxTries = 1000000;
+                    
                     std::shared_ptr<CReserveScript> coinbaseScript = std::make_shared<CReserveScript>();
                     coinbaseScript->reserveScript = GetScriptForDestination(destination);
 
-
                     std::cout << "before calling  generateBlocksZagg\n";
-                    UniValue blockHash = generateBlocks(coinbaseScript, txHex);
+                    UniValue blockHash = generateBlocks(coinbaseScript, nMaxTries, false, txHex, nGenerate);
                     std::cout << "generateBlocks call complete\n";
+                    output << ",";
+                    output << "\"blockHash\":\"" << blockHash[0].getValStr() << "\"";
                 }
-                // return;
                 
-                // std::cout << "success";
-
-                // output << SendRawTransactionZagg(txHex);
-                // if (CADDR_TIME_VERSION >= 100)
-                // {
-                //     std::cout << "ebfore calling  generateBlocksZagg\n";
-                //     std::shared_ptr<CReserveScript> coinbaseScript(new CReserveScript());
-                //     // this will return block hash of new block with one bitcoin tx
-                //     UniValue blockHash = generateBlocks(coinbaseScript, txHex);
-                //     std::string blockHashStr;
-                //     blockHash.setStr(blockHashStr);
-                //     std::cout << "inside do check valid of Mark account operation" << blockHashStr <<"\n";
-                //     std::cout << "success";
-                // }
             }
             catch (const UniValue& objError)
             {   
-                output << JSONRPCReply(UniValue::VNULL, objError, UniValue::VOBJ);
+                output << "\"error\":"<< JSONRPCReply(UniValue::VNULL, objError, UniValue::VOBJ);
                 std::cout << output.str() << std::endl;
             }   
+            output << "}";
         }
     }
     else
