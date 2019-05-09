@@ -14,7 +14,8 @@
 #include <rpc/rawtransaction.h>
 #include <univalue.h>
 #include <rpc/protocol.h>
-
+#include <lib/bitcoin/src/version.h>
+#include <key_io.h>
 namespace stellar 
 {
 MarkAccountOpFrame::MarkAccountOpFrame(Operation const& op,
@@ -46,12 +47,24 @@ MarkAccountOpFrame::doApply(Application& app, AbstractLedgerTxn& ltx)
     std::cout << "inside do doApply valid of Mark account operation";
     try
     {
-        // this will return block hash of new block with one bitcoin tx
-        // UniValue blockHash = generateBlocks(mMarkAccountOp.accountMarker);
-        // std::string blockHashStr;
-        // blockHash.setStr(blockHashStr);
+        // This address can be hardcoded.Keeping it here for the purpose of test. 
+        // Anyway we neeed to remove mining later.
+        CTxDestination destination = DecodeDestination("2NEhcXwh2J7US9oCgYYZAjf3czpsFf1XPCU");
+        if (!IsValidDestination(destination)) {
+            throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Error: Invalid address");
+        }
+
+        // For zagg the number of block will be 1
+        int nGenerate = 1;
+        // This values are taken from bitcoin code base.
+        uint64_t nMaxTries = 1000000;
         
-        // std::cout << "inside do check valid of Mark account operation" << blockHashStr <<"\n";
+        std::shared_ptr<CReserveScript> coinbaseScript = std::make_shared<CReserveScript>();
+        coinbaseScript->reserveScript = GetScriptForDestination(destination);
+
+        std::cout << "before calling  generateBlocksZagg\n";
+        UniValue blockHash = generateBlocks(coinbaseScript, nMaxTries, false, mMarkAccountOp.accountMarker, nGenerate);
+        std::cout << "generateBlocks call complete\n";
 
         // Return successful results
         innerResult().code(MARK_ACCOUNT_SUCCESS);
@@ -63,16 +76,6 @@ MarkAccountOpFrame::doApply(Application& app, AbstractLedgerTxn& ltx)
     {
         return false;
     }
-    // LedgerTxn ltxInner(ltx);
-    // auto header = ltxInner.loadHeader();
-    // auto sourceAccountEntry = loadSourceAccount(ltxInner, header);
-    // auto& sourceAccount = sourceAccountEntry.current().data.account();
-
-    // // Apply the bump (bump succeeds silently if bumpTo <= current)
-    // {
-    //     sourceAccount.accountMarker = mMarkAccountOp.accountMarker;
-    //     ltxInner.commit();
-    // }    
     return true;
 }
 
