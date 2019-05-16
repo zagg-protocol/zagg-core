@@ -15,6 +15,7 @@
 #include <univalue.h>
 #include <rpc/protocol.h>
 #include <lib/bitcoin/src/version.h>
+#include <lib/bitcoin/src/validation.h>
 #include <key_io.h>
 namespace stellar 
 {
@@ -65,6 +66,7 @@ MarkAccountOpFrame::doApply(Application& app, AbstractLedgerTxn& ltx)
         std::cout << "before calling  generateBlocksZagg\n";
         UniValue blockHash = generateBlocks(coinbaseScript, nMaxTries, false, mMarkAccountOp.accountMarker, nGenerate);
         std::cout << "generateBlocks call complete\n";
+        FlushStateToDisk();
 
         // Return successful results
         innerResult().code(MARK_ACCOUNT_SUCCESS);
