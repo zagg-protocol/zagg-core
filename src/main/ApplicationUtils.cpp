@@ -19,6 +19,24 @@
 #include <lib/http/HttpClient.h>
 #include <locale>
 
+//bitcoin related headers
+#include <config/bitcoin-config.h>
+#include <chainparams.h>
+#include <clientversion.h>
+#include <compat.h>
+#include <lib/bitcoin/src/fs.h>
+#include <interfaces/chain.h>
+#include <rpc/server.h>
+#include <init.h>
+#include <noui.h>
+#include <shutdown.h>
+#include <util/system.h>
+#include <httpserver.h>
+#include <httprpc.h>
+#include <util/strencodings.h>
+#include <walletinitinterface.h>
+
+const std::function<std::string(const char*)> G_TRANSLATION_FUN = nullptr; 
 namespace stellar
 {
 
@@ -205,6 +223,182 @@ initializeDatabase(Config cfg)
     LOG(INFO) << "* The next launch will catchup from the network afresh.";
     LOG(INFO) << "*";
 }
+
+// ********************* Bitcoin ******************************************** 
+
+
+
+static bool AppInit(int argc, const char* argv[])
+{
+    InitInterfaces interfaces;
+    interfaces.chain = interfaces::MakeChain();
+
+    bool fRet = false;
+
+    //
+    // Parameters
+    //
+    // If Qt is used, parameters/bitcoin.conf are parsed in qt/bitcoin.cpp's main()
+    SetupServerArgs();
+    std::string error;
+    if (!gArgs.ParseParameters(argc, argv, error)) {
+        fprintf(stderr, "Error parsing command line arguments: %s\n", error.c_str());
+        return false;
+    }
+
+    // Process help and version before taking care about datadir
+    if (HelpRequested(gArgs) || gArgs.IsArgSet("-version")) {
+        std::string strUsage = PACKAGE_NAME " Daemon version " + FormatFullVersion() + "\n";
+
+        if (gArgs.IsArgSet("-version"))
+        {
+            strUsage += FormatParagraph(LicenseInfo()) + "\n";
+        }
+        else
+        {
+            strUsage += "\nUsage:  bitcoind [options]                     Start " PACKAGE_NAME " Daemon\n";
+            strUsage += "\n" + gArgs.GetHelpMessage();
+        }
+
+        fprintf(stdout, "%s", strUsage.c_str());
+        return true;
+    }
+
+    try
+    {
+        if (!boost::filesystem::is_directory(GetDataDir(false)))
+        {
+            fprintf(stderr, "Error: Specified data directory \"%s\" does not exist.\n", gArgs.GetArg("-datadir", "").c_str());
+            return false;
+        }
+        if (!gArgs.ReadConfigFiles(error, true)) {
+            fprintf(stderr, "Error reading configuration file: %s\n", error.c_str());
+            return false;
+        }
+        // Check for -testnet or -regtest parameter (Params() calls are only valid after this clause)
+        try {
+            SelectParams(gArgs.GetChainName());
+        } catch (const std::exception& e) {
+            fprintf(stderr, "Error: %s\n", e.what());
+            return false;
+        }
+
+        // Error out when loose non-argument tokens are encountered on command line
+        for (int i = 1; i < argc; i++) {
+            if (!IsSwitchChar(argv[i][0])) {
+                fprintf(stderr, "Error: Command line contains unexpected token '%s', see bitcoind -h for a list of options.\n", argv[i]);
+                return false;
+            }
+        }
+
+        // -server defaults to true for bitcoind but not for the GUI so do this here
+        gArgs.SoftSetBoolArg("-server", true);
+        // Set this early so that parameter interactions go to console
+        InitLogging();
+        InitParameterInteraction();
+        if (!AppInitBasicSetup())
+        {
+            // InitError will have been called with detailed error, which ends up on console
+            return false;
+        }
+        if (!AppInitParameterInteraction())
+        {
+            // InitError will have been called with detailed error, which ends up on console
+            return false;
+        }
+        if (!AppInitSanityChecks())
+        {
+            // InitError will have been called with detailed error, which ends up on console
+            return false;
+        }
+        if (gArgs.GetBoolArg("-daemon", false))
+        {
+#if HAVE_DECL_DAEMON
+            fprintf(stdout, "Bitcoin server starting\n");
+
+            // Daemonize
+            if (daemon(1, 0)) { // don't chdir (1), do close FDs (0)
+                fprintf(stderr, "Error: daemon() failed: %s\n", strerror(errno));
+                return false;
+            }
+#else
+            fprintf(stderr, "Error: -daemon is not supported on this operating system\n");
+            return false;
+#endif // HAVE_DECL_DAEMON
+        }
+        // Lock data directory after daemonization
+        if (!AppInitLockDataDirectory())
+        {
+            // If locking the data directory failed, exit immediately
+            return false;
+        }
+        fRet = AppInitMain(interfaces);
+        
+    LOG(INFO) << "*";
+    LOG(INFO) << "* Bitcoin Initialization Ends.....................";
+    LOG(INFO) << "*";
+    }
+    catch (const std::exception& e) {
+        PrintExceptionContinue(&e, "AppInit()");
+    } catch (...) {
+        PrintExceptionContinue(nullptr, "AppInit()");
+    }
+
+    return fRet;
+}
+
+static void WaitForShutdown()
+{
+    while (!ShutdownRequested())
+    {
+        MilliSleep(200);
+    }
+    Interrupt();
+}
+
+/**
+ * Initialize and run bitcoind
+ * */
+void 
+initializeRunBitcoinDaemon(Config cfg)
+{   
+
+    LOG(INFO) << "*";
+    LOG(INFO) << "* Bitcoin Initialization Starts.....................\n";
+    LOG(INFO) << "*";
+    try
+    {
+        
+        cfg.setNoListen();
+        SetupEnvironment();
+        // Connect bitcoind signal handlers
+        noui_connect();
+        std::string dataDir;
+        if (cfg.BITCOIN_DATADIR != "")
+        {
+            dataDir = "-datadir=" + cfg.BITCOIN_DATADIR;
+        }
+        else
+        {
+            dataDir = "-datadir=" + GetDefaultDataDir().string();
+        }
+        std::cout <<  "Bitcoin data directory path : " << dataDir << "\n";
+        
+        const char* argvArrayBC[] = {
+            "bitcoind", 
+            "-regtest", 
+            dataDir.c_str()
+        };
+        bool test = AppInit(3, argvArrayBC);
+    }
+    catch (std::exception& e)
+    {
+        LOG(FATAL) << "Bitcoin Initialization Error\n";
+        LOG(FATAL) << e.what();
+    }    
+}
+
+// ********************* Bitcoin ******************************************** 
 
 void
 showOfflineInfo(Config cfg)

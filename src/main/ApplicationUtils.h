@@ -14,6 +14,7 @@ class CatchupConfiguration;
 int runWithConfig(Config cfg);
 void setForceSCPFlag(Config cfg, bool set);
 void initializeDatabase(Config cfg);
+void initializeRunBitcoinDaemon(Config cfg);
 void httpCommand(std::string const& command, unsigned short port);
 void loadXdr(Config cfg, std::string const& bucketFile);
 void showOfflineInfo(Config cfg);

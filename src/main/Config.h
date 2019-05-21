@@ -207,6 +207,10 @@ class Config : public std::enable_shared_from_this<Config>
     std::vector<std::string> COMMANDS;
     std::vector<std::string> REPORT_METRICS;
 
+    // Bitcoin config
+    bool BITCOIN_REGTEST; // if run in regtest?
+    std::string BITCOIN_DATADIR; // data directory for bitcoin
+
     std::string NTP_SERVER; // ntp server used to check if time is valid on host
 
     // Data layer cache configuration
