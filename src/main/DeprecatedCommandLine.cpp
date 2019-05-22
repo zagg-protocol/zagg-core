@@ -66,7 +66,8 @@ enum opttag
     OPT_NETID,
     OPT_TEST,
     OPT_FILETYPE,
-    OPT_VERSION
+    OPT_VERSION,
+    OPT_BITCOIND
 };
 
 const struct option stellar_core_options[] = {
@@ -102,6 +103,7 @@ const struct option stellar_core_options[] = {
     {"newhist", required_argument, nullptr, OPT_NEWHIST},
     {"test", no_argument, nullptr, OPT_TEST},
     {"version", no_argument, nullptr, OPT_VERSION},
+    {"bitcoind", no_argument, nullptr, OPT_BITCOIND},
     {nullptr, 0, nullptr, 0}};
 
 void
@@ -175,7 +177,8 @@ usage(int err = 1)
           "                           (Default is STELLAR_NETWORK_ID "
           "environment variable)\n"
           "      --test               Run self-tests\n"
-          "      --version            Print version information\n";
+          "      --version            Print version information\n"
+          "      --bitcoind           Run stellar with bitcoin deamon\n";
     exit(err);
 }
 
@@ -237,6 +240,7 @@ handleDeprecatedCommandLine(int argc, char* const* argv)
     bool checkQuorum = false;
     bool graphQuorum = false;
     bool newDB = false;
+    bool withBitcoin = false;
     bool getOfflineInfo = false;
     auto doReportLastHistoryCheckpoint = false;
     std::string outputFile;
@@ -358,6 +362,9 @@ handleDeprecatedCommandLine(int argc, char* const* argv)
         case OPT_VERSION:
             std::cout << STELLAR_CORE_VERSION << std::endl;
             return 0;
+        case OPT_BITCOIND:
+            withBitcoin = true;
+            break;
         case OPT_HELP:
         default:
             usage(0);
@@ -388,6 +395,11 @@ handleDeprecatedCommandLine(int argc, char* const* argv)
 
         cfg.REPORT_METRICS = metrics;
 
+        if (withBitcoin)
+        {
+            initializeRunBitcoinDaemon(cfg);   
+        }
+
         if (forceSCP || newDB || getOfflineInfo || !loadXdrBucket.empty() ||
             inferQuorum || graphQuorum || checkQuorum || doCatchupAt ||
             doCatchupComplete || doCatchupRecent || doCatchupTo ||
@@ -396,6 +408,7 @@ handleDeprecatedCommandLine(int argc, char* const* argv)
             auto result = 0;
             if (newDB)
                 initializeDatabase(cfg);
+
             if ((result == 0) && (doCatchupAt || doCatchupComplete ||
                                   doCatchupRecent || doCatchupTo))
             {

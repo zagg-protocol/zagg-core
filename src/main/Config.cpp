@@ -524,6 +524,14 @@ Config::load(std::string const& filename)
             {
                 BEST_OFFERS_CACHE_SIZE = readInt<uint32_t>(item);
             }
+            else if (item.first == "BITCOIN_REGTEST")
+            {
+                BITCOIN_REGTEST = readBool(item);
+            }
+            else if (item.first == "BITCOIN_DATADIR")
+            {
+                BITCOIN_DATADIR = readString(item);
+            }
             else
             {
                 std::string err("Unknown configuration entry: '");
