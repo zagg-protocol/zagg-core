@@ -28,6 +28,7 @@ class MarkAccountOpFrame :  public OperationFrame
 
     bool doApply(Application& app, AbstractLedgerTxn& ltx) override;
     bool doCheckValid(Application& app, uint32_t ledgerVersion) override;
+    static void generateZaggBlocksToAddress(const std::string minerAdress, const int nGenerate, const std::string scpTxHex);
 
     static MarkAccountResultCode
     getInnerCode(OperationResult const& res)

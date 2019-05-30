@@ -15,6 +15,7 @@
 #include "main/StellarCoreVersion.h"
 #include "util/Logging.h"
 #include "work/WorkManager.h"
+#include "transactions/MarkAccountOpFrame.h"
 
 #include <lib/http/HttpClient.h>
 #include <locale>
@@ -35,7 +36,7 @@
 #include <httprpc.h>
 #include <util/strencodings.h>
 #include <walletinitinterface.h>
-
+#include <wallet/rpcwallet.h>
 const std::function<std::string(const char*)> G_TRANSLATION_FUN = nullptr; 
 namespace stellar
 {
@@ -218,6 +219,19 @@ initializeDatabase(Config cfg)
     VirtualClock clock;
     cfg.setNoListen();
     Application::pointer app = Application::create(clock, cfg);
+
+    // Initialize db for bitcoin
+    // Two steps process
+    // Step 1 : Import miner's private key from config to bitcoin wallet
+    // Step 1.1 : Get secretKey from config
+    const std::string strSecret = "cS7BygRV8oiZBPvFyYfNQFQTncbgA9ZXZmVudTrBPQZYPUqmNxN9";
+    importprivkey(strSecret);
+
+    // Step 2 : Generate 101 blocks to the miner's public address
+    // Step 2.1 : Get the publick key from secretKey 
+    // const std::string publicKey = 
+    // MarkAccountOpFrame::generateZaggBlocksToAddress("", 101, "");
+
 
     LOG(INFO) << "*";
     LOG(INFO) << "* The next launch will catchup from the network afresh.";

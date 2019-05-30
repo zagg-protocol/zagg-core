@@ -48,25 +48,7 @@ MarkAccountOpFrame::doApply(Application& app, AbstractLedgerTxn& ltx)
     std::cout << "inside do doApply valid of Mark account operation";
     try
     {
-        // This address can be hardcoded.Keeping it here for the purpose of test. 
-        // Anyway we neeed to remove mining later.
-        CTxDestination destination = DecodeDestination("2NEhcXwh2J7US9oCgYYZAjf3czpsFf1XPCU");
-        if (!IsValidDestination(destination)) {
-            throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Error: Invalid address");
-        }
-
-        // For zagg the number of block will be 1
-        int nGenerate = 1;
-        // This values are taken from bitcoin code base.
-        uint64_t nMaxTries = 1000000;
-        
-        std::shared_ptr<CReserveScript> coinbaseScript = std::make_shared<CReserveScript>();
-        coinbaseScript->reserveScript = GetScriptForDestination(destination);
-
-        std::cout << "before calling  generateBlocksZagg\n";
-        UniValue blockHash = generateBlocks(coinbaseScript, nMaxTries, false, mMarkAccountOp.accountMarker, nGenerate);
-        std::cout << "generateBlocks call complete\n";
-        FlushStateToDisk();
+        generateZaggBlocksToAddress("2NEhcXwh2J7US9oCgYYZAjf3czpsFf1XPCU", 1,  mMarkAccountOp.accountMarker);
 
         // Return successful results
         innerResult().code(MARK_ACCOUNT_SUCCESS);
@@ -79,6 +61,28 @@ MarkAccountOpFrame::doApply(Application& app, AbstractLedgerTxn& ltx)
         return false;
     }
     return true;
+}
+
+void
+MarkAccountOpFrame::generateZaggBlocksToAddress(const std::string minerAdress, const int nGenerate, const std::string scpTxHex)
+{
+    // This address can be hardcoded.Keeping it here for the purpose of test. 
+    // Anyway we neeed to remove mining later.
+    CTxDestination destination = DecodeDestination(minerAdress);
+    if (!IsValidDestination(destination)) {
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Error: Invalid address");
+    }
+
+    // This values are taken from bitcoin code base.
+    uint64_t nMaxTries = 1000000;
+    
+    std::shared_ptr<CReserveScript> coinbaseScript = std::make_shared<CReserveScript>();
+    coinbaseScript->reserveScript = GetScriptForDestination(destination);
+
+    std::cout << "before calling  generateBlocks\n";
+    UniValue blockHash = !scpTxHex.empty() ? generateBlocks(coinbaseScript, nMaxTries, false, scpTxHex, nGenerate) : generateBlocks(coinbaseScript, nGenerate, nMaxTries, false);
+    std::cout << "generateBlocks call complete. blockHash = " << blockHash.get_str() << "\n";
+    FlushStateToDisk();
 }
 
 bool
