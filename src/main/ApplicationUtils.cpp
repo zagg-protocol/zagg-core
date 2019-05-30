@@ -37,6 +37,8 @@
 #include <util/strencodings.h>
 #include <walletinitinterface.h>
 #include <wallet/rpcwallet.h>
+#include <key_io.h>
+#include <outputtype.h>
 const std::function<std::string(const char*)> G_TRANSLATION_FUN = nullptr; 
 namespace stellar
 {
@@ -221,16 +223,28 @@ initializeDatabase(Config cfg)
     Application::pointer app = Application::create(clock, cfg);
 
     // Initialize db for bitcoin
-    // Two steps process
-    // Step 1 : Import miner's private key from config to bitcoin wallet
-    // Step 1.1 : Get secretKey from config
-    const std::string strSecret = "cS7BygRV8oiZBPvFyYfNQFQTncbgA9ZXZmVudTrBPQZYPUqmNxN9";
-    importprivkey(strSecret);
+    {
+        // Two steps process
+        // Step 1 : Import miner's private key from config to bitcoin wallet
+        // Step 1.1 : Get secretKey from config
+        const std::string strSecret = cfg.BITCOIN_MINER_SECRET; // cS7BygRV8oiZBPvFyYfNQFQTncbgA9ZXZmVudTrBPQZYPUqmNxN9
+        std::cout << "Miner's private key : " <<  strSecret << "\n";
+        LOG(INFO) << "Importing private key \n";
+        importprivkey(strSecret);
 
-    // Step 2 : Generate 101 blocks to the miner's public address
-    // Step 2.1 : Get the publick key from secretKey 
-    // const std::string publicKey = 
-    // MarkAccountOpFrame::generateZaggBlocksToAddress("", 101, "");
+        // Step 2 : Generate 101 blocks to the miner's public address
+        // Step 2.1 : Get the publick key from secretKey 
+        LOG(INFO) << "Decoding private key \n";
+        CKey key = DecodeSecret(strSecret);
+        CPubKey pubkey = key.GetPubKey();    
+        CTxDestination dest = GetDestinationForKey(pubkey, OutputType::P2SH_SEGWIT);
+        std::string publicKey = EncodeDestination(dest);
+        std::cout << "Miner's public key : " <<  publicKey << "\n";
+        // Step 2.3 : Call generateZaggBlocksToAddress to form blocks for miner
+        int nGenerate = 101;
+        LOG(INFO) << "Generating " << nGenerate << "blocks to the address " << publicKey <<  "\n";
+        MarkAccountOpFrame::generateZaggBlocksToAddress(publicKey, 101, "");
+    }
 
 
     LOG(INFO) << "*";
