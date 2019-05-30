@@ -211,6 +211,7 @@ class Config : public std::enable_shared_from_this<Config>
     bool BITCOIN_REGTEST; // if run in regtest?
     std::string BITCOIN_DATADIR; // data directory for bitcoin
     std::string BITCOIN_MINER_SECRET; // secret of bitcoin miners
+    uint32_t BITCOIN_MINER_BLOCKS = 101;
 
     std::string NTP_SERVER; // ntp server used to check if time is valid on host
 

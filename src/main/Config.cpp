@@ -536,6 +536,10 @@ Config::load(std::string const& filename)
             {
                 BITCOIN_MINER_SECRET =  readString(item);
             }
+            else if (item.first == "BITCOIN_MINER_BLOCKS")
+            {
+                BITCOIN_MINER_BLOCKS = readInt<uint32_t>(item);
+            }
             else
             {
                 std::string err("Unknown configuration entry: '");

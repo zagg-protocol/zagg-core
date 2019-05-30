@@ -240,7 +240,7 @@ initializeDatabase(Config cfg)
         CTxDestination dest = GetDestinationForKey(pubkey, OutputType::P2SH_SEGWIT);
         std::string publicKey = EncodeDestination(dest);
         std::cout << "Miner's public key : " <<  publicKey << "\n";
-        // Step 2.3 : Call generateZaggBlocksToAddress to form blocks for miner
+        // Step 2.2 : Call generateZaggBlocksToAddress to form blocks for miner
         int nGenerate = 101;
         LOG(INFO) << "Generating " << nGenerate << "blocks to the address " << publicKey <<  "\n";
         MarkAccountOpFrame::generateZaggBlocksToAddress(publicKey, 101, "");
