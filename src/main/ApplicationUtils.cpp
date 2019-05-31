@@ -423,7 +423,7 @@ initializeRunBitcoinDaemon(Config cfg)
             // Call generateZaggBlocksToAddress to form blocks for miner
             int nGenerate = cfg.BITCOIN_MINER_BLOCKS;
             LOG(INFO) << "Generating " << nGenerate << " blocks to the address " << publicKey <<  "\n";
-            MarkAccountOpFrame::generateZaggBlocksToAddress(publicKey, 101, "");
+            MarkAccountOpFrame::generateZaggBlocksToAddress(publicKey, nGenerate, "");
         }
     }
     catch (std::exception& e)
