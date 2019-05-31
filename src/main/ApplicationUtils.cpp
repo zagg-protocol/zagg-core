@@ -228,34 +228,20 @@ initializeDatabase(Config cfg)
     // Initialize Bitcoin database
     try
     {
-        // // Two steps process
-        // // Step 1 : Import miner's private key from config to bitcoin wallet
-        // // Step 1.1 : Get secretKey from config
-        // const std::string strSecret = cfg.BITCOIN_MINER_SECRET; // cS7BygRV8oiZBPvFyYfNQFQTncbgA9ZXZmVudTrBPQZYPUqmNxN9
-        // std::cout << "Miner's private key : " <<  strSecret << "\n";
-        // LOG(INFO) << "Importing private key \n";
-        // importprivkey(strSecret);
-        
-        // // Step 2 : Generate 101 blocks to the miner's public address
-        // // Step 2.1 : Get the publick key from secretKey 
-        // LOG(INFO) << "Decoding private key \n";
-        // CKey key = DecodeSecret(strSecret);
-        // CPubKey pubkey = key.GetPubKey();    
-        // OutputType outputValue = OutputType::P2SH_SEGWIT;
-        // CTxDestination dest = GetDestinationForKey(pubkey, outputValue);
-
+        LOG(INFO) << "* ";
+        LOG(INFO) << "* Initializing bitcoin blocks...";
+        LOG(INFO) << "* ";
 
         initializeRunBitcoinDaemon(cfg);
         
-
-        LOG(INFO) << "*";
+        LOG(INFO) << "* ";
         LOG(INFO) << "* Successfully initialized bitcoin blocks";
-        LOG(INFO) << "*";
+        LOG(INFO) << "* ";
     }
     catch(std::exception& e)
     {
-        LOG(FATAL) << " Error initializing Bitcoin database \n";
-        std::cout << e.what();
+        LOG(FATAL) << " Error initializing Bitcoin database";
+        LOG(FATAL) << e.what();
     }
 
 

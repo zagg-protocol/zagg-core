@@ -79,12 +79,13 @@ MarkAccountOpFrame::generateZaggBlocksToAddress(const std::string minerAdress, c
     std::shared_ptr<CReserveScript> coinbaseScript = std::make_shared<CReserveScript>();
     coinbaseScript->reserveScript = GetScriptForDestination(destination);
 
-    std::cout << "before calling  generateBlocks\n";
+    std::cout << "Before calling  generateBlocks\n";
     UniValue blockHashes = !scpTxHex.empty() ? generateBlocks(coinbaseScript, nMaxTries, false, scpTxHex, nGenerate) : generateBlocks(coinbaseScript, nGenerate, nMaxTries, false);
+    std::cout << "After calling  generateBlocks\n";
     std::cout << "[";
-    for (const UniValue& scanobject : blockHashes.get_array().getValues()) 
+    for (const UniValue& blockHash : blockHashes.get_array().getValues()) 
     {
-        std::cout << "\n\"" << scanobject.get_str() << "\"" << ",";   
+        std::cout << "\n\"" << blockHash.get_str() << "\"" << ",";   
     }
     std::cout << "]\n";
     FlushStateToDisk();
