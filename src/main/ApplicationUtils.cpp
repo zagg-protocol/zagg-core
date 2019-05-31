@@ -43,6 +43,8 @@ const std::function<std::string(const char*)> G_TRANSLATION_FUN = nullptr;
 namespace stellar
 {
 
+bool isNewDb = false;
+
 namespace
 {
 bool
@@ -220,30 +222,40 @@ initializeDatabase(Config cfg)
 {
     VirtualClock clock;
     cfg.setNoListen();
-    Application::pointer app = Application::create(clock, cfg);
+    isNewDb = true;
+    Application::pointer app = Application::create(clock, cfg, isNewDb);
 
-    // Initialize db for bitcoin
+    // Initialize Bitcoin database
+    try
     {
-        // Two steps process
-        // Step 1 : Import miner's private key from config to bitcoin wallet
-        // Step 1.1 : Get secretKey from config
-        const std::string strSecret = cfg.BITCOIN_MINER_SECRET; // cS7BygRV8oiZBPvFyYfNQFQTncbgA9ZXZmVudTrBPQZYPUqmNxN9
-        std::cout << "Miner's private key : " <<  strSecret << "\n";
-        LOG(INFO) << "Importing private key \n";
-        importprivkey(strSecret);
+        // // Two steps process
+        // // Step 1 : Import miner's private key from config to bitcoin wallet
+        // // Step 1.1 : Get secretKey from config
+        // const std::string strSecret = cfg.BITCOIN_MINER_SECRET; // cS7BygRV8oiZBPvFyYfNQFQTncbgA9ZXZmVudTrBPQZYPUqmNxN9
+        // std::cout << "Miner's private key : " <<  strSecret << "\n";
+        // LOG(INFO) << "Importing private key \n";
+        // importprivkey(strSecret);
+        
+        // // Step 2 : Generate 101 blocks to the miner's public address
+        // // Step 2.1 : Get the publick key from secretKey 
+        // LOG(INFO) << "Decoding private key \n";
+        // CKey key = DecodeSecret(strSecret);
+        // CPubKey pubkey = key.GetPubKey();    
+        // OutputType outputValue = OutputType::P2SH_SEGWIT;
+        // CTxDestination dest = GetDestinationForKey(pubkey, outputValue);
 
-        // Step 2 : Generate 101 blocks to the miner's public address
-        // Step 2.1 : Get the publick key from secretKey 
-        LOG(INFO) << "Decoding private key \n";
-        CKey key = DecodeSecret(strSecret);
-        CPubKey pubkey = key.GetPubKey();    
-        CTxDestination dest = GetDestinationForKey(pubkey, OutputType::P2SH_SEGWIT);
-        std::string publicKey = EncodeDestination(dest);
-        std::cout << "Miner's public key : " <<  publicKey << "\n";
-        // Step 2.2 : Call generateZaggBlocksToAddress to form blocks for miner
-        int nGenerate = 101;
-        LOG(INFO) << "Generating " << nGenerate << "blocks to the address " << publicKey <<  "\n";
-        MarkAccountOpFrame::generateZaggBlocksToAddress(publicKey, 101, "");
+
+        initializeRunBitcoinDaemon(cfg);
+        
+
+        LOG(INFO) << "*";
+        LOG(INFO) << "* Successfully initialized bitcoin blocks";
+        LOG(INFO) << "*";
+    }
+    catch(std::exception& e)
+    {
+        LOG(FATAL) << " Error initializing Bitcoin database \n";
+        std::cout << e.what();
     }
 
 
@@ -371,7 +383,6 @@ static bool AppInit(int argc, const char* argv[])
     } catch (...) {
         PrintExceptionContinue(nullptr, "AppInit()");
     }
-
     return fRet;
 }
 
@@ -418,10 +429,20 @@ initializeRunBitcoinDaemon(Config cfg)
             dataDir.c_str()
         };
         bool test = AppInit(3, argvArrayBC);
+
+        if(test && isNewDb)
+        {
+            std::string publicKey = cfg.BITCOIN_MINER_ADDRESS;
+            std::cout << "Miner's public key : " <<  publicKey << "\n";
+            // Call generateZaggBlocksToAddress to form blocks for miner
+            int nGenerate = cfg.BITCOIN_MINER_BLOCKS;
+            LOG(INFO) << "Generating " << nGenerate << " blocks to the address " << publicKey <<  "\n";
+            MarkAccountOpFrame::generateZaggBlocksToAddress(publicKey, 101, "");
+        }
     }
     catch (std::exception& e)
     {
-        LOG(FATAL) << "Bitcoin Initialization Error\n";
+        LOG(FATAL) << "Bitcoin Initialization Error.\n";
         LOG(FATAL) << e.what();
     }    
 }

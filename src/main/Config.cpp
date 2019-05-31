@@ -532,9 +532,9 @@ Config::load(std::string const& filename)
             {
                 BITCOIN_DATADIR = readString(item);
             }
-            else if (item.first == "BITCOIN_MINER_SECRET")
+            else if (item.first == "BITCOIN_MINER_ADDRESS")
             {
-                BITCOIN_MINER_SECRET =  readString(item);
+                BITCOIN_MINER_ADDRESS =  readString(item);
             }
             else if (item.first == "BITCOIN_MINER_BLOCKS")
             {
