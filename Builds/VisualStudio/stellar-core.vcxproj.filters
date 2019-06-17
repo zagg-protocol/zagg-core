@@ -861,6 +861,9 @@
     <ClCompile Include="..\..\src\transactions\MarkAccountOpFrame.cpp">
       <Filter>transactions</Filter>
     </ClCompile>
+    <ClInclude Include="..\..\src\transactions\MineBlockOpFrame.cpp">
+      <Filter>transactions</Filter>
+    </ClInclude>
     <ClCompile Include="..\..\src\overlay\PeerSharedKeyId.cpp">
       <Filter>overlay</Filter>
     </ClCompile>
@@ -1497,6 +1500,9 @@
       <Filter>transactions</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\transactions\MarkAccountOpFrame.h">
+      <Filter>transactions</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\transactions\MineBlockOpFrame.h">
       <Filter>transactions</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\main\StellarCoreVersion.h">

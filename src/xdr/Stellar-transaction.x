@@ -27,7 +27,8 @@ enum OperationType
     INFLATION = 9,
     MANAGE_DATA = 10,
     BUMP_SEQUENCE = 11,
-    MARK_ACCOUNT = 12
+    MARK_ACCOUNT = 12,
+    MINE_BLOCK = 13
 };
 
 /* CreateAccount
@@ -249,6 +250,19 @@ struct MarkAccountOp
 };
 
 
+/*  Mine a block. Used for withdrawal. 
+    Threshold : high 
+
+    Result: MineBlockResult
+*/
+struct MineBlockOp
+{
+    AccountID minerAccount; // account to be mine. this is noting but sender's bitcoin address.
+    string64 block; //INTERNAL: this is hidden for wallet UI and will  be filled once the block gets formed during the op. Its string since its going to be HEX-encoded block.
+    int64 amount; // corresponding utxo amount that needs to be converted 
+};
+
+
 /* An operation is the lowest unit of work that a transaction does */
 struct Operation
 {
@@ -285,6 +299,8 @@ struct Operation
         BumpSequenceOp bumpSequenceOp;
     case MARK_ACCOUNT:
         MarkAccountOp markAccountOp;  
+    case MINE_BLOCK:
+        MineBlockOp mineBlockOp;  
     }
     body;
 };
@@ -723,6 +739,25 @@ union MarkAccountResult switch (MarkAccountResultCode code)
         void;    
 };
 
+/********** MineBlock Result ********/
+
+enum MineBlockResultCode
+{
+    MINE_BLOCK_SUCCESS = 0,
+    MINE_BLOCK_FAILED = -1,
+    MINE_BLOCK_BAD_BTC_ADDRESS = -2,
+    MINE_BLOCK_MALFORMED = -3,          // bad input
+    MINE_BLOCK_UNDERFUNDED = -4,        // not enough funds in source account
+};
+
+union MineBlockResult switch (MineBlockResultCode code)
+{
+    case MINE_BLOCK_SUCCESS:
+        void;
+    default:
+        void;    
+};
+
 /* High level Operation Result */
 
 enum OperationResultCode
@@ -765,6 +800,8 @@ case opINNER:
         BumpSequenceResult bumpSeqResult;
     case MARK_ACCOUNT:
         MarkAccountResult markAccountResult;
+    case MINE_BLOCK:
+        MineBlockResult mineBlockResult;
     }
     tr;
 default:
